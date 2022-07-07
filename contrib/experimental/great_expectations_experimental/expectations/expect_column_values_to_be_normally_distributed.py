@@ -49,7 +49,7 @@ class ColumnNormallyDistributed(ColumnMetricProvider):
     metric_name = "column.custom.normally_distributed"
 
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return stats.normaltest(column, nan_policy="omit")[1]  # Should we omit nan?
 
     #

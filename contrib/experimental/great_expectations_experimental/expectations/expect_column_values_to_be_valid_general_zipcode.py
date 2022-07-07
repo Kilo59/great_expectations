@@ -22,10 +22,7 @@ def is_zipcode_valid(zipcode: str, country_code) -> bool:
     try:
         data = pgeocode.Nominatim(country_code.upper())
         place_name = data.query_postal_code(zipcode).place_name
-        if isinstance(place_name, str):
-            return True
-        else:
-            return False
+        return isinstance(place_name, str)
     except Exception as e:
         return False
 
@@ -40,7 +37,7 @@ class ColumnValuesToBeValidGeneralZipcode(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_code, **kwargs):
+    def _pandas(self, column, country_code, **kwargs):
         return column.apply(lambda x: is_zipcode_valid(x, country_code))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

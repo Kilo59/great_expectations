@@ -134,42 +134,40 @@ class ExpectationSuite(SerializableDictDot):
         - data_asset_type
         """
         if not isinstance(other, self.__class__):
-            if isinstance(other, dict):
-                try:
-                    other_dict: dict = expectationSuiteSchema.load(other)
-                    other: ExpectationSuite = ExpectationSuite(
-                        **other_dict, data_context=self._data_context
-                    )
-                except ValidationError:
-                    logger.debug(
-                        "Unable to evaluate equivalence of ExpectationConfiguration object with dict because "
-                        "dict other could not be instantiated as an ExpectationConfiguration"
-                    )
-                    return NotImplemented
-            else:
+            if not isinstance(other, dict):
                 # Delegate comparison to the other instance
                 return NotImplemented
 
+            try:
+                other_dict: dict = expectationSuiteSchema.load(other)
+                other: ExpectationSuite = ExpectationSuite(
+                    **other_dict, data_context=self._data_context
+                )
+            except ValidationError:
+                logger.debug(
+                    "Unable to evaluate equivalence of ExpectationConfiguration object with dict because "
+                    "dict other could not be instantiated as an ExpectationConfiguration"
+                )
+                return NotImplemented
         return len(self.expectations) == len(other.expectations) and all(
-            [
-                mine.isEquivalentTo(theirs)
-                for (mine, theirs) in zip(self.expectations, other.expectations)
-            ]
+            mine.isEquivalentTo(theirs)
+            for (mine, theirs) in zip(self.expectations, other.expectations)
         )
 
     def __eq__(self, other):
         """ExpectationSuite equality ignores instance identity, relying only on properties."""
-        if not isinstance(other, self.__class__):
-            # Delegate comparison to the other instance's __eq__.
-            return NotImplemented
-        return all(
-            (
-                self.expectation_suite_name == other.expectation_suite_name,
-                self.expectations == other.expectations,
-                self.evaluation_parameters == other.evaluation_parameters,
-                self.data_asset_type == other.data_asset_type,
-                self.meta == other.meta,
+        return (
+            all(
+                (
+                    self.expectation_suite_name == other.expectation_suite_name,
+                    self.expectations == other.expectations,
+                    self.evaluation_parameters == other.evaluation_parameters,
+                    self.data_asset_type == other.data_asset_type,
+                    self.meta == other.meta,
+                )
             )
+            if isinstance(other, self.__class__)
+            else NotImplemented
         )
 
     def __ne__(self, other):
@@ -259,11 +257,11 @@ class ExpectationSuite(SerializableDictDot):
     def _filter_citations(
         citations: List[Dict[str, Any]], filter_key
     ) -> List[Dict[str, Any]]:
-        citations_with_bk: List[Dict[str, Any]] = []
-        for citation in citations:
-            if filter_key in citation and citation.get(filter_key):
-                citations_with_bk.append(citation)
-        return citations_with_bk
+        return [
+            citation
+            for citation in citations
+            if filter_key in citation and citation.get(filter_key)
+        ]
 
     @staticmethod
     def _sort_citations(citations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -321,10 +319,11 @@ class ExpectationSuite(SerializableDictDot):
 
         elif len(found_expectation_indexes) > 1:
             if remove_multiple_matches:
-                removed_expectations = []
-                for index in sorted(found_expectation_indexes, reverse=True):
-                    removed_expectations.append(self.expectations.pop(index))
-                return removed_expectations
+                return [
+                    self.expectations.pop(index)
+                    for index in sorted(found_expectation_indexes, reverse=True)
+                ]
+
             else:
                 raise ValueError(
                     "More than one matching expectation was found. Specify more precise matching criteria,"
@@ -388,16 +387,14 @@ class ExpectationSuite(SerializableDictDot):
             raise InvalidExpectationConfigurationError(
                 "Ensure that expectation configuration is valid."
             )
-        match_indexes = []
-        for idx, expectation in enumerate(self.expectations):
-            if ge_cloud_id is not None:
-                if str(expectation.ge_cloud_id) == str(ge_cloud_id):
-                    match_indexes.append(idx)
-            else:
-                if expectation.isEquivalentTo(expectation_configuration, match_type):
-                    match_indexes.append(idx)
-
-        return match_indexes
+        return [
+            idx
+            for idx, expectation in enumerate(self.expectations)
+            if ge_cloud_id is not None
+            and str(expectation.ge_cloud_id) == ge_cloud_id
+            or ge_cloud_id is None
+            and expectation.isEquivalentTo(expectation_configuration, match_type)
+        ]
 
     def find_expectations(
         self,
@@ -591,8 +588,8 @@ class ExpectationSuite(SerializableDictDot):
         return expectation_configuration
 
     def send_usage_event(self, success: bool) -> None:
-        usage_stats_event_payload: dict = {}
         if self._data_context is not None:
+            usage_stats_event_payload: dict = {}
             self._data_context.send_usage_message(
                 event=UsageStatsEvents.EXPECTATION_SUITE_ADD_EXPECTATION.value,
                 event_payload=usage_stats_event_payload,
@@ -624,9 +621,7 @@ class ExpectationSuite(SerializableDictDot):
             One match if overwrite_existing = False
         """
         expectation_configuration: ExpectationConfiguration
-        expectation_configurations_attempted_to_be_added: List[
-            ExpectationConfiguration
-        ] = [
+        return [
             self.add_expectation(
                 expectation_configuration=expectation_configuration,
                 send_usage_event=send_usage_event,
@@ -635,7 +630,6 @@ class ExpectationSuite(SerializableDictDot):
             )
             for expectation_configuration in expectation_configurations
         ]
-        return expectation_configurations_attempted_to_be_added
 
     def add_expectation(
         self,

@@ -43,8 +43,9 @@ class CheckpointStore(ConfigurationStore):
 
     def serialization_self_check(self, pretty_print: bool) -> None:
         test_checkpoint_name: str = "test-name-" + "".join(
-            [random.choice(list("0123456789ABCDEF")) for i in range(20)]
+            [random.choice(list("0123456789ABCDEF")) for _ in range(20)]
         )
+
         test_checkpoint_configuration: CheckpointConfig = CheckpointConfig(
             **{"name": test_checkpoint_name}
         )

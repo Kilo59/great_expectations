@@ -21,10 +21,7 @@ from great_expectations.expectations.metrics import (
 def is_bic_belong_to_country(bic: str, country_code) -> bool:
     try:
         bic = schwifty.BIC(bic)
-        if bic.country_code.upper() == country_code.upper():
-            return True
-        else:
-            return False
+        return bic.country_code.upper() == country_code.upper()
     except Exception as e:
         return False
 
@@ -39,7 +36,7 @@ class ColumnValuesBicBelongToCountry(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_code, **kwargs):
+    def _pandas(self, column, country_code, **kwargs):
         return column.apply(lambda x: is_bic_belong_to_country(x, country_code))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

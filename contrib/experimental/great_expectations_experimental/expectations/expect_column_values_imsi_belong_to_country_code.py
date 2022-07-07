@@ -23,10 +23,7 @@ def imsi_country_code(imsi_num: str, country_code) -> bool:
     try:
         imsi.validate(imsi_num)
         country = imsi.info(imsi_num)["cc"].lower()
-        if country_code.lower() == country:
-            return True
-        else:
-            return False
+        return country_code.lower() == country
     except Exception as e:
         return False
 
@@ -41,7 +38,7 @@ class ColumnValuesImsiBelongToCountryCode(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_code, **kwargs):
+    def _pandas(self, column, country_code, **kwargs):
         return column.apply(lambda x: imsi_country_code(x, country_code))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

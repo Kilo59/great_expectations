@@ -39,7 +39,7 @@ class ForeignKeysInColumnAExistInColumnB(ColumnMapMetricProvider):
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, df, column_B, **kwargs):
+    def _pandas(self, column, df, column_B, **kwargs):
         if type(df) == list:
             df = pd.DataFrame(df)
         value_set = set(df[column_B])

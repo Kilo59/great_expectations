@@ -16,16 +16,9 @@ from great_expectations.expectations.metrics import (
 def is_valid_city_name(city: str):
     geocache = geonamescache.GeonamesCache()
     dict_of_cities = geocache.get_cities()
-    list_of_cities = [d for d in dict_of_cities.values()]
+    list_of_cities = list(dict_of_cities.values())
     list_of_city_names = [item["name"] for item in list_of_cities]
-    if len(city) > 54:
-        return False
-    elif type(city) != str:
-        return False
-    elif city in list_of_city_names:
-        return True
-    else:
-        return False
+    return len(city) <= 54 and type(city) == str and city in list_of_city_names
 
 
 # This class defines a Metric to support your Expectation.
@@ -37,7 +30,7 @@ class ColumnValuesToBeValidCityName(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_city_name(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

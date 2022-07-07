@@ -45,7 +45,7 @@ class ColumnValuesToNotContainCharacter(ColumnMapMetricProvider):
 
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, character, **kwargs):
+    def _pandas(self, column, character, **kwargs):
         return column.apply(lambda val: str(character) not in str(val))
 
 

@@ -17,14 +17,9 @@ def is_valid_us_county_fip(county_fip: str):
     geocache = geonamescache.GeonamesCache()
     dict_of_counties = geocache.get_us_counties()
     list_of_county_fips = [d["fips"] for d in dict_of_counties]
-    if len(county_fip) > 5:
+    if len(county_fip) > 5 or type(county_fip) != str:
         return False
-    elif type(county_fip) != str:
-        return False
-    if county_fip in list_of_county_fips:
-        return True
-    else:
-        return False
+    return county_fip in list_of_county_fips
 
 
 # This class defines a Metric to support your Expectation.
@@ -36,7 +31,7 @@ class ColumnValuesToBeValidUSCountyFip(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_us_county_fip(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

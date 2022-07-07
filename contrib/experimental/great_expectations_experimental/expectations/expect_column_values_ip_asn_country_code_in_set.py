@@ -22,10 +22,7 @@ def is_ip_asn_country_code_in_set(addr: str, country_codes) -> bool:
     obj = IPWhois(addr)
     res = obj.lookup_rdap()
     asn_country_code = res["asn_country_code"].lower()
-    if asn_country_code in country_codes:
-        return True
-    else:
-        return False
+    return asn_country_code in country_codes
 
 
 # This class defines a Metric to support your Expectation.
@@ -38,7 +35,7 @@ class ColumnValuesToBePrivateIpV6(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_codes, **kwargs):
+    def _pandas(self, column, country_codes, **kwargs):
         return column.apply(lambda x: is_ip_asn_country_code_in_set(x, country_codes))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

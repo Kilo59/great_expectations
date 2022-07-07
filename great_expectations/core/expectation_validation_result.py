@@ -53,11 +53,7 @@ class ExpectationValidationResult(SerializableDictDot):
         **kwargs: dict,
     ) -> None:
         # TODO: NF - feature flag to be updated upon feature release
-        if "include_rendered_content" in kwargs:
-            self.include_rendered_content = kwargs["include_rendered_content"]
-        else:
-            self.include_rendered_content = False
-
+        self.include_rendered_content = kwargs.get("include_rendered_content", False)
         if result and not self.validate_result_dict(result):
             raise ge_exceptions.InvalidCacheValueError(result)
         self.success = success
@@ -98,8 +94,9 @@ class ExpectationValidationResult(SerializableDictDot):
                 result_dict = self.to_json_dict()["result"]
                 other_result_dict = other.to_json_dict()["result"]
                 contents_equal = all(
-                    [result_dict[k] == other_result_dict[k] for k in common_keys]
+                    result_dict[k] == other_result_dict[k] for k in common_keys
                 )
+
             else:
                 contents_equal = False
 
@@ -302,9 +299,9 @@ class ExpectationValidationResult(SerializableDictDot):
                         return self.result["details"].get(metric_name_parts[3])
                 except KeyError:
                     raise ge_exceptions.UnavailableMetricError(
-                        "Unable to get metric {} -- KeyError in "
-                        "ExpectationValidationResult.".format(metric_name)
+                        f"Unable to get metric {metric_name} -- KeyError in ExpectationValidationResult."
                     )
+
         raise ge_exceptions.UnavailableMetricError(
             f"Unrecognized metric name {metric_name}"
         )
@@ -373,17 +370,18 @@ class ExpectationSuiteValidationResult(SerializableDictDot):
 
     def __eq__(self, other):
         """ExpectationSuiteValidationResult equality ignores instance identity, relying only on properties."""
-        if not isinstance(other, self.__class__):
-            # Delegate comparison to the other instance's __eq__.
-            return NotImplemented
-        return all(
-            (
-                self.success == other.success,
-                self.results == other.results,
-                self.evaluation_parameters == other.evaluation_parameters,
-                self.statistics == other.statistics,
-                self.meta == other.meta,
+        return (
+            all(
+                (
+                    self.success == other.success,
+                    self.results == other.results,
+                    self.evaluation_parameters == other.evaluation_parameters,
+                    self.statistics == other.statistics,
+                    self.meta == other.meta,
+                )
             )
+            if isinstance(other, self.__class__)
+            else NotImplemented
         )
 
     def __repr__(self):
@@ -418,30 +416,25 @@ class ExpectationSuiteValidationResult(SerializableDictDot):
                     f"Unrecognized metric {metric_name}"
                 )
 
-        # Expose expectation-defined metrics
         elif metric_name_parts[0].lower().startswith("expect_"):
-            # Check our cache first
             if (metric_name, metric_kwargs_id) in self._metrics:
                 return self._metrics[(metric_name, metric_kwargs_id)]
-            else:
-                for result in self.results:
-                    try:
-                        if (
-                            metric_name_parts[0]
-                            == result.expectation_config.expectation_type
-                        ):
-                            metric_value = result.get_metric(metric_name, **kwargs)
-                            break
-                    except ge_exceptions.UnavailableMetricError:
-                        pass
-                if metric_value is not None:
-                    self._metrics[(metric_name, metric_kwargs_id)] = metric_value
-                    return metric_value
+            for result in self.results:
+                try:
+                    if (
+                        metric_name_parts[0]
+                        == result.expectation_config.expectation_type
+                    ):
+                        metric_value = result.get_metric(metric_name, **kwargs)
+                        break
+                except ge_exceptions.UnavailableMetricError:
+                    pass
+            if metric_value is not None:
+                self._metrics[(metric_name, metric_kwargs_id)] = metric_value
+                return metric_value
 
         raise ge_exceptions.UnavailableMetricError(
-            "Metric {} with metric_kwargs_id {} is not available.".format(
-                metric_name, metric_kwargs_id
-            )
+            f"Metric {metric_name} with metric_kwargs_id {metric_kwargs_id} is not available."
         )
 
     def get_failed_validation_results(

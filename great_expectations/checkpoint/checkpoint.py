@@ -150,8 +150,8 @@ class BaseCheckpoint(ConfigPeer):
         # AsyncExecutor and the corresponding AsyncExecutor docstring for more details on when multiple threads are
         # used.
         with AsyncExecutor(
-            self.data_context.concurrency, max_workers=len(validations)
-        ) as async_executor:
+                self.data_context.concurrency, max_workers=len(validations)
+            ) as async_executor:
             # noinspection PyUnresolvedReferences
             async_validation_operator_results: List[
                 AsyncResult[ValidationOperatorResult]
@@ -178,9 +178,7 @@ class BaseCheckpoint(ConfigPeer):
 
             run_results: dict = {}
             for async_validation_operator_result in async_validation_operator_results:
-                run_results.update(
-                    async_validation_operator_result.result().run_results
-                )
+                run_results |= async_validation_operator_result.result().run_results
 
         return CheckpointResult(
             run_id=run_id,
@@ -216,8 +214,7 @@ class BaseCheckpoint(ConfigPeer):
     ) -> dict:
         substituted_config: dict
 
-        template_name = source_config.get("template_name")
-        if template_name:
+        if template_name := source_config.get("template_name"):
             checkpoint: Checkpoint = self.data_context.get_checkpoint(
                 name=template_name
             )
@@ -309,17 +306,16 @@ class BaseCheckpoint(ConfigPeer):
 
             validator: Validator = self.data_context.get_validator(
                 batch_request=batch_request,
-                expectation_suite_name=(
-                    expectation_suite_name
-                    if not self.data_context.ge_cloud_mode
-                    else None
-                ),
+                expectation_suite_name=None
+                if self.data_context.ge_cloud_mode
+                else expectation_suite_name,
                 expectation_suite_ge_cloud_id=(
                     expectation_suite_ge_cloud_id
                     if self.data_context.ge_cloud_mode
                     else None
                 ),
             )
+
 
             action_list: list = substituted_validation_dict.get("action_list")
             runtime_configuration_validation = substituted_validation_dict.get(
@@ -392,22 +388,22 @@ class BaseCheckpoint(ConfigPeer):
         )
         action_list: Optional[list] = self.action_list
         action_list_present: bool = (
-            action_list is not None
-            and isinstance(action_list, list)
-            and len(action_list) > 0
-        ) or (
-            validations_present
+            (
+                action_list is not None
+                and isinstance(action_list, list)
+                and len(action_list) > 0
+            )
+            or validations_present
             and all(
-                [
-                    (
-                        validation.get("action_list")
-                        and isinstance(validation["action_list"], list)
-                        and len(validation["action_list"]) > 0
-                    )
-                    for validation in self.validations
-                ]
+                (
+                    validation.get("action_list")
+                    and isinstance(validation["action_list"], list)
+                    and len(validation["action_list"]) > 0
+                )
+                for validation in self.validations
             )
         )
+
         if pretty_print:
             if not validations_present:
                 print(
@@ -614,7 +610,7 @@ constructor arguments.
             for key, value in checkpoint_config_from_store.items()
             if key in checkpoint_config_from_call_args
         }
-        checkpoint_config.update(checkpoint_config_from_call_args)
+        checkpoint_config |= checkpoint_config_from_call_args
 
         checkpoint_run_arguments: dict = dict(**checkpoint_config, **kwargs)
         filter_properties_dict(
@@ -703,7 +699,7 @@ constructor arguments.
             clean_falsy=True,
         )
 
-        new_checkpoint: Checkpoint = instantiate_class_from_config(
+        return instantiate_class_from_config(
             config=checkpoint_config,
             runtime_environment={
                 "data_context": data_context,
@@ -712,8 +708,6 @@ constructor arguments.
                 "module_name": "great_expectations.checkpoint",
             },
         )
-
-        return new_checkpoint
 
     @staticmethod
     def instantiate_from_config_with_runtime_args(
@@ -731,7 +725,7 @@ constructor arguments.
 
         config = filter_properties_dict(properties=config, clean_falsy=True)
 
-        checkpoint: Checkpoint = instantiate_class_from_config(
+        return instantiate_class_from_config(
             config=config,
             runtime_environment={
                 "data_context": data_context,
@@ -740,8 +734,6 @@ constructor arguments.
                 "module_name": "great_expectations.checkpoint",
             },
         )
-
-        return checkpoint
 
 
 class LegacyCheckpoint(Checkpoint):
@@ -964,7 +956,7 @@ class LegacyCheckpoint(Checkpoint):
                 self.validation_operator_name
             )
         ):
-            results = self.data_context.run_validation_operator(
+            return self.data_context.run_validation_operator(
                 self.validation_operator_name,
                 assets_to_validate=batches_to_validate,
                 run_id=run_id,
@@ -974,23 +966,21 @@ class LegacyCheckpoint(Checkpoint):
                 result_format=result_format,
                 **kwargs,
             )
-        else:
-            if self.validation_operator_name:
-                logger.warning(
-                    f'Could not find Validation Operator "{self.validation_operator_name}" when '
-                    f'running Checkpoint "{self.name}". Using default action_list_operator.'
-                )
 
-            results = self._run_default_validation_operator(
-                assets_to_validate=batches_to_validate,
-                run_id=run_id,
-                evaluation_parameters=evaluation_parameters,
-                run_name=run_name,
-                run_time=run_time,
-                result_format=result_format,
+        if self.validation_operator_name:
+            logger.warning(
+                f'Could not find Validation Operator "{self.validation_operator_name}" when '
+                f'running Checkpoint "{self.name}". Using default action_list_operator.'
             )
 
-        return results
+        return self._run_default_validation_operator(
+            assets_to_validate=batches_to_validate,
+            run_id=run_id,
+            evaluation_parameters=evaluation_parameters,
+            run_name=run_name,
+            run_time=run_time,
+            result_format=result_format,
+        )
 
     def _get_batches_to_validate(self, batches):
         batches_to_validate = []

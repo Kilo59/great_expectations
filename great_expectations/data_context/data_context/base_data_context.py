@@ -523,10 +523,6 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 self._cached_datasources[datasource_name] = datasource
             except ge_exceptions.DatasourceInitializationError as e:
                 logger.warning(f"Cannot initialize datasource {datasource_name}: {e}")
-                # this error will happen if our configuration contains datasources that GE can no longer connect to.
-                # this is ok, as long as we don't use it to retrieve a batch. If we try to do that, the error will be
-                # caught at the context.get_batch() step. So we just pass here.
-                pass
 
     def _construct_data_context_id(self) -> str:
         """
@@ -620,11 +616,12 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         return new_validation_operator
 
     def _normalize_store_path(self, resource_store):
-        if resource_store["type"] == "filesystem":
-            if not os.path.isabs(resource_store["base_directory"]):
-                resource_store["base_directory"] = os.path.join(
-                    self.root_directory, resource_store["base_directory"]
-                )
+        if resource_store["type"] == "filesystem" and not os.path.isabs(
+            resource_store["base_directory"]
+        ):
+            resource_store["base_directory"] = os.path.join(
+                self.root_directory, resource_store["base_directory"]
+            )
         return resource_store
 
     def get_site_names(self) -> List[str]:
@@ -907,7 +904,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         Returns:
             input value with all `$` characters replaced with the escape string
         """
-        if isinstance(value, dict) or isinstance(value, OrderedDict):
+        if isinstance(value, (dict, OrderedDict)):
             return {
                 k: self.escape_all_config_variables(
                     v, dollar_sign_escape_string, skip_if_substitution_variable
@@ -922,13 +919,14 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 )
                 for v in value
             ]
-        if skip_if_substitution_variable:
-            if parse_substitution_variable(value) is None:
-                return value.replace("$", dollar_sign_escape_string)
-            else:
-                return value
-        else:
+        if (
+            skip_if_substitution_variable
+            and parse_substitution_variable(value) is None
+            or not skip_if_substitution_variable
+        ):
             return value.replace("$", dollar_sign_escape_string)
+        else:
+            return value
 
     def save_config_variable(
         self,
@@ -992,16 +990,14 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         """
         if datasource_name is None:
             raise ValueError("Datasource names must be a datasource name")
-        else:
-            datasource = self.get_datasource(datasource_name=datasource_name)
-            if datasource:
-                if save_changes:
-                    self._datasource_store.delete_by_name(datasource_name)
-                else:
-                    del self.config.datasources[datasource_name]
-                del self._cached_datasources[datasource_name]
+        if datasource := self.get_datasource(datasource_name=datasource_name):
+            if save_changes:
+                self._datasource_store.delete_by_name(datasource_name)
             else:
-                raise ValueError(f"Datasource {datasource_name} not found")
+                del self.config.datasources[datasource_name]
+            del self._cached_datasources[datasource_name]
+        else:
+            raise ValueError(f"Datasource {datasource_name} not found")
 
     def get_available_data_asset_names(
         self, datasource_names=None, batch_kwargs_generator_names=None
@@ -1111,13 +1107,12 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             )
             data_asset_name = kwargs.pop("name")
         datasource_obj = self.get_datasource(datasource)
-        batch_kwargs = datasource_obj.build_batch_kwargs(
+        return datasource_obj.build_batch_kwargs(
             batch_kwargs_generator=batch_kwargs_generator,
             data_asset_name=data_asset_name,
             partition_id=partition_id,
             **kwargs,
         )
-        return batch_kwargs
 
     def _get_batch_v2(
         self,
@@ -1615,11 +1610,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
 
         # TODO: NF - feature flag to be updated upon feature release
         include_rendered_content: bool
-        if "include_rendered_content" in kwargs:
-            include_rendered_content = kwargs["include_rendered_content"]
-        else:
-            include_rendered_content = False
-
+        include_rendered_content = kwargs.get("include_rendered_content", False)
         if (
             sum(
                 bool(x)
@@ -1714,12 +1705,8 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
     ) -> Validator:
         # TODO: NF - feature flag to be updated upon feature release
         include_rendered_content: bool
-        if "include_rendered_content" in kwargs:
-            include_rendered_content = kwargs["include_rendered_content"]
-        else:
-            include_rendered_content = False
-
-        if len(batch_list) == 0:
+        include_rendered_content = kwargs.get("include_rendered_content", False)
+        if not batch_list:
             raise ge_exceptions.InvalidBatchRequestError(
                 """Validator could not be created because BatchRequest returned an empty batch_list.
                 Please check your parameters and try again."""
@@ -1730,7 +1717,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         execution_engine: ExecutionEngine = self.datasources[
             batch_definition.datasource_name
         ].execution_engine
-        validator: Validator = Validator(
+        return Validator(
             execution_engine=execution_engine,
             interactive_evaluation=True,
             expectation_suite=expectation_suite,
@@ -1738,13 +1725,13 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             batches=batch_list,
             include_rendered_content=include_rendered_content,
         )
-        return validator
 
     def list_validation_operator_names(self):
-        if not self.validation_operators:
-            return []
-
-        return list(self.validation_operators.keys())
+        return (
+            list(self.validation_operators.keys())
+            if self.validation_operators
+            else []
+        )
 
     @usage_statistics_enabled_method(
         event_name=UsageStatsEvents.DATA_CONTEXT_ADD_DATASOURCE.value,
@@ -1783,15 +1770,12 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         else:
             config = kwargs
 
-        datasource: Optional[
-            Union[LegacyDatasource, BaseDatasource]
-        ] = self._instantiate_datasource_from_config_and_update_project_config(
+        return self._instantiate_datasource_from_config_and_update_project_config(
             name=name,
             config=config,
             initialize=initialize,
             save_changes=save_changes,
         )
-        return datasource
 
     def _instantiate_datasource_from_config_and_update_project_config(
         self,
@@ -1904,10 +1888,9 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
 
         """
         datasource_obj = self.get_datasource(datasource_name)
-        generator = datasource_obj.add_batch_kwargs_generator(
+        return datasource_obj.add_batch_kwargs_generator(
             name=batch_kwargs_generator_name, class_name=class_name, **kwargs
         )
-        return generator
 
     def set_config(self, project_config: DataContextConfig) -> None:
         self._project_config = project_config
@@ -2112,22 +2095,18 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             )
             if self.expectations_store.has_key(key) and not overwrite_existing:
                 raise ge_exceptions.DataContextError(
-                    "expectation_suite with GE Cloud ID {} already exists. If you would like to overwrite this "
-                    "expectation_suite, set overwrite_existing=True.".format(
-                        ge_cloud_id
-                    )
+                    f"expectation_suite with GE Cloud ID {ge_cloud_id} already exists. If you would like to overwrite this expectation_suite, set overwrite_existing=True."
                 )
+
         else:
             key: ExpectationSuiteIdentifier = ExpectationSuiteIdentifier(
                 expectation_suite_name=expectation_suite_name
             )
             if self.expectations_store.has_key(key) and not overwrite_existing:
                 raise ge_exceptions.DataContextError(
-                    "expectation_suite with name {} already exists. If you would like to overwrite this "
-                    "expectation_suite, set overwrite_existing=True.".format(
-                        expectation_suite_name
-                    )
+                    f"expectation_suite with name {expectation_suite_name} already exists. If you would like to overwrite this expectation_suite, set overwrite_existing=True."
                 )
+
 
         self.expectations_store.set(key, expectation_suite, **kwargs)
         return expectation_suite
@@ -2157,9 +2136,8 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             raise ge_exceptions.DataContextError(
                 "expectation_suite with name {} does not exist."
             )
-        else:
-            self.expectations_store.remove_key(key)
-            return True
+        self.expectations_store.remove_key(key)
+        return True
 
     def get_expectation_suite(
         self,
@@ -2183,17 +2161,15 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 expectation_suite_name=expectation_suite_name
             )
 
-        if self.expectations_store.has_key(key):
-            expectations_schema_dict: dict = cast(
-                dict, self.expectations_store.get(key)
-            )
-            # create the ExpectationSuite from constructor
-            return ExpectationSuite(**expectations_schema_dict, data_context=self)
-
-        else:
+        if not self.expectations_store.has_key(key):
             raise ge_exceptions.DataContextError(
                 f"expectation_suite {expectation_suite_name} not found"
             )
+        expectations_schema_dict: dict = cast(
+            dict, self.expectations_store.get(key)
+        )
+        # create the ExpectationSuite from constructor
+        return ExpectationSuite(**expectations_schema_dict, data_context=self)
 
     def list_expectation_suite_names(self) -> List[str]:
         """
@@ -2242,11 +2218,9 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             )
             if self.expectations_store.has_key(key) and not overwrite_existing:
                 raise ge_exceptions.DataContextError(
-                    "expectation_suite with GE Cloud ID {} already exists. If you would like to overwrite this "
-                    "expectation_suite, set overwrite_existing=True.".format(
-                        ge_cloud_id
-                    )
+                    f"expectation_suite with GE Cloud ID {ge_cloud_id} already exists. If you would like to overwrite this expectation_suite, set overwrite_existing=True."
                 )
+
         else:
             if expectation_suite_name is None:
                 key: ExpectationSuiteIdentifier = ExpectationSuiteIdentifier(
@@ -2259,11 +2233,9 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 )
             if self.expectations_store.has_key(key) and not overwrite_existing:
                 raise ge_exceptions.DataContextError(
-                    "expectation_suite with name {} already exists. If you would like to overwrite this "
-                    "expectation_suite, set overwrite_existing=True.".format(
-                        expectation_suite_name
-                    )
+                    f"expectation_suite with name {expectation_suite_name} already exists. If you would like to overwrite this expectation_suite, set overwrite_existing=True."
                 )
+
 
         self._evaluation_parameter_dependencies_compiled = False
         return self.expectations_store.set(key, expectation_suite, **kwargs)
@@ -2299,9 +2271,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
         )
 
         for expectation_suite_dependency, metrics_list in requested_metrics.items():
-            if (expectation_suite_dependency != "*") and (
-                expectation_suite_dependency != expectation_suite_name
-            ):
+            if expectation_suite_dependency not in ["*", expectation_suite_name]:
                 continue
 
             if not isinstance(metrics_list, list):
@@ -2338,8 +2308,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                     except ge_exceptions.UnavailableMetricError:
                         # This will happen frequently in larger pipelines
                         logger.debug(
-                            "metric {} was requested by another expectation suite but is not available in "
-                            "this validation result.".format(metric_name)
+                            f"metric {metric_name} was requested by another expectation suite but is not available in this validation result."
                         )
 
     def store_validation_result_metrics(
@@ -2449,16 +2418,16 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 filtered_key_list.append(key)
 
             # run_id_set = set([key.run_id for key in filtered_key_list])
-            if len(filtered_key_list) == 0:
+            if not filtered_key_list:
                 logger.warning("No valid run_id values found.")
                 return {}
 
             filtered_key_list = sorted(filtered_key_list, key=lambda x: x.run_id)
 
-            if run_id is None:
-                run_id = filtered_key_list[-1].run_id
-            if batch_identifier is None:
-                batch_identifier = filtered_key_list[-1].batch_identifier
+        if run_id is None:
+            run_id = filtered_key_list[-1].run_id
+        if batch_identifier is None:
+            batch_identifier = filtered_key_list[-1].batch_identifier
 
         key = ValidationResultIdentifier(
             expectation_suite_identifier=ExpectationSuiteIdentifier(
@@ -2529,8 +2498,7 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
 
         index_page_locator_infos = {}
 
-        sites = self.project_config_with_variables_substituted.data_docs_sites
-        if sites:
+        if sites := self.project_config_with_variables_substituted.data_docs_sites:
             logger.debug("Found data_docs_sites. Building sites...")
 
             for site_name, site_config in sites.items():
@@ -2561,15 +2529,13 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                         index_page_locator_infos[
                             site_name
                         ] = site_builder.get_resource_url(only_if_exists=False)
-                    else:
-                        index_page_resource_identifier_tuple = site_builder.build(
-                            resource_identifiers,
-                            build_index=(build_index and not self.ge_cloud_mode),
-                        )
-                        if index_page_resource_identifier_tuple:
-                            index_page_locator_infos[
-                                site_name
-                            ] = index_page_resource_identifier_tuple[0]
+                    elif index_page_resource_identifier_tuple := site_builder.build(
+                        resource_identifiers,
+                        build_index=(build_index and not self.ge_cloud_mode),
+                    ):
+                        index_page_locator_infos[
+                            site_name
+                        ] = index_page_resource_identifier_tuple[0]
 
         else:
             logger.debug("No data_docs_config found. No site(s) built.")
@@ -2600,9 +2566,11 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 )
             return self._clean_data_docs_site(site_name)
 
-        cleaned = []
-        for existing_site_name in data_docs_site_names:
-            cleaned.append(self._clean_data_docs_site(existing_site_name))
+        cleaned = [
+            self._clean_data_docs_site(existing_site_name)
+            for existing_site_name in data_docs_site_names
+        ]
+
         return all(cleaned)
 
     def _clean_data_docs_site(self, site_name: str) -> bool:
@@ -2719,10 +2687,9 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 ]["names"]
             except KeyError:
                 raise ge_exceptions.ProfilerError(
-                    "batch kwargs Generator {} not found. Specify the name of a generator configured in this datasource".format(
-                        batch_kwargs_generator_name
-                    )
+                    f"batch kwargs Generator {batch_kwargs_generator_name} not found. Specify the name of a generator configured in this datasource"
                 )
+
 
         available_data_asset_name_list = sorted(
             available_data_asset_name_list, key=lambda x: x[0]
@@ -2730,19 +2697,17 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
 
         if len(available_data_asset_name_list) == 0:
             raise ge_exceptions.ProfilerError(
-                "No Data Assets found in Datasource {}. Used batch kwargs generator: {}.".format(
-                    datasource_name, batch_kwargs_generator_name
-                )
+                f"No Data Assets found in Datasource {datasource_name}. Used batch kwargs generator: {batch_kwargs_generator_name}."
             )
+
         total_data_assets = len(available_data_asset_name_list)
 
         if isinstance(data_assets, list) and len(data_assets) > 0:
-            not_found_data_assets = [
+            if not_found_data_assets := [
                 name
                 for name in data_assets
                 if name not in [da[0] for da in available_data_asset_name_list]
-            ]
-            if len(not_found_data_assets) > 0:
+            ]:
                 profiling_results = {
                     "success": False,
                     "error": {
@@ -2758,20 +2723,20 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
             total_data_assets = len(available_data_asset_name_list)
             if not dry_run:
                 logger.info(
-                    f"Profiling the white-listed data assets: {','.join(data_assets)}, alphabetically."
+                    f"Profiling the white-listed data assets: {','.join(data_asset_names_to_profiled)}, alphabetically."
                 )
+
         else:
-            if not profile_all_data_assets:
-                if total_data_assets > max_data_assets:
-                    profiling_results = {
-                        "success": False,
-                        "error": {
-                            "code": BaseDataContext.PROFILING_ERROR_CODE_TOO_MANY_DATA_ASSETS,
-                            "num_data_assets": total_data_assets,
-                            "data_assets": available_data_asset_name_list,
-                        },
-                    }
-                    return profiling_results
+            if not profile_all_data_assets and total_data_assets > max_data_assets:
+                profiling_results = {
+                    "success": False,
+                    "error": {
+                        "code": BaseDataContext.PROFILING_ERROR_CODE_TOO_MANY_DATA_ASSETS,
+                        "num_data_assets": total_data_assets,
+                        "data_assets": available_data_asset_name_list,
+                    },
+                }
+                return profiling_results
 
             data_asset_names_to_profiled = [
                 name[0] for name in available_data_asset_name_list
@@ -2919,16 +2884,14 @@ class BaseDataContext(EphemeralDataContext, ConfigPeer):
                 )
             except ge_exceptions.BatchKwargsError:
                 raise ge_exceptions.ProfilerError(
-                    "Unable to build batch_kwargs for datasource {}, using batch kwargs generator {} for name {}".format(
-                        datasource_name, batch_kwargs_generator_name, data_asset_name
-                    )
+                    f"Unable to build batch_kwargs for datasource {datasource_name}, using batch kwargs generator {batch_kwargs_generator_name} for name {data_asset_name}"
                 )
+
             except ValueError:
                 raise ge_exceptions.ProfilerError(
-                    "Unable to find datasource {} or batch kwargs generator {}.".format(
-                        datasource_name, batch_kwargs_generator_name
-                    )
+                    f"Unable to find datasource {datasource_name} or batch kwargs generator {batch_kwargs_generator_name}."
                 )
+
         else:
             batch_kwargs.update(additional_batch_kwargs)
 
@@ -3101,13 +3064,11 @@ Generated, evaluated, and stored {total_expectations} Expectations during profil
         checkpoint_config: CheckpointConfig = self.checkpoint_store.get_checkpoint(
             name=name, ge_cloud_id=ge_cloud_id
         )
-        checkpoint: Checkpoint = Checkpoint.instantiate_from_config_with_runtime_args(
+        return Checkpoint.instantiate_from_config_with_runtime_args(
             checkpoint_config=checkpoint_config,
             data_context=self,
             name=name,
         )
-
-        return checkpoint
 
     def delete_checkpoint(
         self,
@@ -3169,7 +3130,7 @@ Generated, evaluated, and stored {total_expectations} Expectations during profil
             name=checkpoint_name,
             ge_cloud_id=ge_cloud_id,
         )
-        result: CheckpointResult = checkpoint.run_with_runtime_args(
+        return checkpoint.run_with_runtime_args(
             template_name=template_name,
             run_name_template=run_name_template,
             expectation_suite_name=expectation_suite_name,
@@ -3186,7 +3147,6 @@ Generated, evaluated, and stored {total_expectations} Expectations during profil
             expectation_suite_ge_cloud_id=expectation_suite_ge_cloud_id,
             **kwargs,
         )
-        return result
 
     def add_profiler(
         self,
@@ -3537,8 +3497,7 @@ Generated, evaluated, and stored {total_expectations} Expectations during profil
             raise e
 
         try:
-            config: CommentedMap = yaml.load(config_str_with_substituted_variables)
-            return config
+            return yaml.load(config_str_with_substituted_variables)
 
         except Exception as e:
             usage_stats_event_payload: dict = {

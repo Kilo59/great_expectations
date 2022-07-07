@@ -63,7 +63,7 @@ def docs_list(directory) -> None:
     context = toolkit.load_data_context_with_error_handling(directory)
 
     docs_sites_url_dicts = context.get_docs_sites_urls()
-    docs_sites_strings = [
+    if docs_sites_strings := [
         " - <cyan>{}</cyan>: {}".format(
             docs_site_dict["site_name"],
             docs_site_dict.get("site_url")
@@ -71,14 +71,12 @@ def docs_list(directory) -> None:
             f'docs build --site-name {docs_site_dict["site_name"]}',
         )
         for docs_site_dict in docs_sites_url_dicts
-    ]
-
-    if len(docs_sites_strings) == 0:
-        cli_message("No Data Docs sites found")
-    else:
+    ]:
         list_intro_string = _build_intro_string(docs_sites_strings)
         cli_message_list(docs_sites_strings, list_intro_string)
 
+    else:
+        cli_message("No Data Docs sites found")
     send_usage_message(
         data_context=context,
         event="cli.docs.list",
@@ -145,10 +143,7 @@ def build_docs(context, site_name=None, view=True, assume_yes=False) -> None:
     """Build documentation in a context"""
     logger.debug("Starting cli.datasource.build_docs")
 
-    if site_name is not None:
-        site_names = [site_name]
-    else:
-        site_names = None
+    site_names = [site_name] if site_name is not None else None
     index_page_locator_infos = context.build_data_docs(
         site_names=site_names, dry_run=True
     )

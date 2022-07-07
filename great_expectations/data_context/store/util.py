@@ -45,12 +45,11 @@ def build_configuration_store(
         "overwrite_existing": overwrite_existing,
         "store_backend": store_backend,
     }
-    configuration_store: ConfigurationStore = build_store_from_config(
+    return build_store_from_config(
         store_config=store_config,
         module_name=module_name,
         runtime_environment=None,
     )
-    return configuration_store
 
 
 def build_checkpoint_store_using_store_backend(

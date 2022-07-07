@@ -35,7 +35,7 @@ class ColumnValuesMatchPowersOfBase(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, base_integer, **kwargs):
+    def _pandas(self, column, base_integer, **kwargs):
         return column.apply(lambda x: is_power_of_n(x, base_integer))
 
 

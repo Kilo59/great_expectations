@@ -22,16 +22,10 @@ from great_expectations.expectations.metrics import (
 def is_not_holiday(date, country_code) -> bool:
     try:
         holidays_list = country_holidays(country_code.upper())
-        if isinstance(date, str):
-            d = parse(date)
-        else:
-            d = date
+        d = parse(date) if isinstance(date, str) else date
     except Exception as e:
         return False
-    if d in holidays_list:
-        return False
-    else:
-        return True
+    return d not in holidays_list
 
 
 # This class defines a Metric to support your Expectation.
@@ -44,7 +38,7 @@ class ColumnValuesToBeNotHoliday(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_code, **kwargs):
+    def _pandas(self, column, country_code, **kwargs):
         return column.apply(lambda x: is_not_holiday(x, country_code))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

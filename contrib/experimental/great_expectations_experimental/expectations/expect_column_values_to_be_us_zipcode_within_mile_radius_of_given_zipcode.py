@@ -308,7 +308,7 @@ class ExpectColumnValuesToBeUSZipcodeWithinMileRadiusOfGivenZipcode(
             template_str += "."
 
         if include_column_name:
-            template_str = "$column " + template_str
+            template_str = f"$column {template_str}"
 
         return [
             RenderedStringTemplateContent(

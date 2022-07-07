@@ -84,10 +84,9 @@ class DataContextVariables(ABC):
         """
         Generates the appropriate Store key to retrieve/store configs.
         """
-        key: ConfigurationIdentifier = ConfigurationIdentifier(
+        return ConfigurationIdentifier(
             configuration_key=DataContextVariableSchema.ALL_VARIABLES
         )
-        return key
 
     def _set(self, attr: DataContextVariableSchema, value: Any) -> None:
         key: str = attr.value
@@ -96,8 +95,7 @@ class DataContextVariables(ABC):
     def _get(self, attr: DataContextVariableSchema) -> Any:
         key: str = attr.value
         val: Any = self.config[key]
-        substituted_val: Any = substitute_config_variable(val, self.substitutions)
-        return substituted_val
+        return substitute_config_variable(val, self.substitutions)
 
     def save_config(self) -> None:
         """
@@ -316,12 +314,11 @@ class EphemeralDataContextVariables(DataContextVariables):
             DataContextStore,
         )
 
-        store: DataContextStore = DataContextStore(
+        return DataContextStore(
             store_name="ephemeral_data_context_store",
             store_backend=None,  # Defaults to InMemoryStoreBackend
             runtime_environment=None,
         )
-        return store
 
 
 @dataclass
@@ -350,12 +347,11 @@ class FileDataContextVariables(DataContextVariables):
             "class_name": "InlineStoreBackend",
             "data_context": self.data_context,
         }
-        store: DataContextStore = DataContextStore(
+        return DataContextStore(
             store_name="file_data_context_store",
             store_backend=store_backend,
             runtime_environment=None,
         )
-        return store
 
 
 @dataclass
@@ -399,18 +395,16 @@ class CloudDataContextVariables(DataContextVariables):
             },
             "suppress_store_backend_id": True,
         }
-        store: DataContextStore = DataContextStore(
+        return DataContextStore(
             store_name="cloud_data_context_store",
             store_backend=store_backend,
             runtime_environment=None,
         )
-        return store
 
     def get_key(self) -> GeCloudIdentifier:
         """
         Generates a GE Cloud-specific key for use with Stores. See parent "DataContextVariables.get_key" for more details.
         """
-        key: GeCloudIdentifier = GeCloudIdentifier(
+        return GeCloudIdentifier(
             resource_type=DataContextVariableSchema.ALL_VARIABLES
         )
-        return key

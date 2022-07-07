@@ -22,13 +22,11 @@ class ColumnAverageLatLonPairwiseDistance(ColumnAggregateMetricProvider):
     value_keys = ()
 
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         # convert everything to arrays for pairwise distance computation
         column_array = np.array([np.array([point[0], point[1]]) for point in column])
 
-        result = pdist(column_array, cls.haversine_adapted).mean()
-
-        return result
+        return pdist(column_array, self.haversine_adapted).mean()
 
     @staticmethod
     def haversine_adapted(point_1, point_2):

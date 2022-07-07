@@ -22,10 +22,7 @@ from great_expectations.expectations.metrics import (
 def is_btc_tx_confirmed(tx: str) -> bool:
     try:
         cnt = blockcypher.get_num_confirmations(tx)
-        if cnt > 0:
-            return True
-        else:
-            return False
+        return cnt > 0
     except Exception as e:
         print(e)
         return False
@@ -40,7 +37,7 @@ class ColumnValuesBitcoinTxIsConfirmed(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_btc_tx_confirmed(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

@@ -40,9 +40,7 @@ class ColumnValuesContainValidEmail(ColumnMapMetricProvider):
     @column_condition_partial(engine=PandasExecutionEngine)
     def _pandas(cls, column, **kwargs):
         def matches_email_regex(x):
-            if re.match(EMAIL_REGEX, str(x)):
-                return True
-            return False
+            return bool(re.match(EMAIL_REGEX, str(x)))
 
         return column.apply(lambda x: matches_email_regex(x) if x else False)
 
@@ -53,7 +51,7 @@ class ColumnValuesContainValidEmail(ColumnMapMetricProvider):
 
     # This method defines the business logic for evaluating your metric when using a SparkDFExecutionEngine
     @column_condition_partial(engine=SparkDFExecutionEngine)
-    def _spark(cls, column, **kwargs):
+    def _spark(self, column, **kwargs):
         return column.rlike(EMAIL_REGEX)
 
 

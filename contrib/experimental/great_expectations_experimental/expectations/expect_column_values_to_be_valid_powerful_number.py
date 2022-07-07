@@ -15,12 +15,9 @@ from great_expectations.expectations.metrics import (
 def is_valid_powerful_number(num: str) -> bool:
     try:
         n = int(num)
-        unique_factors = set(f for f in primefac(n))
+        unique_factors = set(primefac(n))
 
-        for p in unique_factors:
-            if n % (p * p) != 0:
-                return False
-        return True
+        return all(n % (p * p) == 0 for p in unique_factors)
     except ValueError:
         return False
 
@@ -34,7 +31,7 @@ class ColumnValuesToBeValidPowerfulNumber(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_powerful_number(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

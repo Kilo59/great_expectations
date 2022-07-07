@@ -93,9 +93,7 @@ class ProfilerAnonymizer(BaseAnonymizer):
         return anonymized_rules
 
     def _anonymize_rule(self, name: str, rule: dict) -> dict:
-        anonymized_rule: dict = {}
-        anonymized_rule["anonymized_name"] = self._anonymize_string(name)
-
+        anonymized_rule: dict = {"anonymized_name": self._anonymize_string(name)}
         domain_builder: Optional[dict] = rule.get("domain_builder")
         if domain_builder is not None:
             anonymized_rule[

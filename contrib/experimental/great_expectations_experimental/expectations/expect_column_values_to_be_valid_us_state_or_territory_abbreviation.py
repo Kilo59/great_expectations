@@ -17,18 +17,13 @@ def is_valid_state_or_territory_abbreviation(state: str, dc_statehood: bool):
     list_of_state_and_territory_abbrs = [
         x.abbr for x in us.states.STATES_AND_TERRITORIES
     ]
-    if dc_statehood == True:
+    if dc_statehood:
         list_of_state_and_territory_abbrs.append("DC")
-    else:
-        pass
-    if len(state) != 2:
-        return False
-    elif type(state) != str:
-        return False
-    elif state in list_of_state_and_territory_abbrs:
-        return True
-    else:
-        return False
+    return (
+        len(state) == 2
+        and type(state) == str
+        and state in list_of_state_and_territory_abbrs
+    )
 
 
 # This class defines a Metric to support your Expectation.
@@ -40,7 +35,7 @@ class ColumnValuesToBeValidUSStateOrTerritoryAbbreviation(ColumnMapMetricProvide
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, dc_statehood=True, **kwargs):
+    def _pandas(self, column, dc_statehood=True, **kwargs):
         return column.apply(
             lambda x: is_valid_state_or_territory_abbreviation(x, dc_statehood)
         )

@@ -52,7 +52,7 @@ class ColumnRuleFollowers(ColumnMapMetricProvider):
     condition_value_keys = ("rule",)
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, rule, **kwargs):
+    def _pandas(self, column, rule, **kwargs):
 
         if rule["ranges"] is {}:
             raise ValueError("Ranges must contain at least 1 variable!")
@@ -74,13 +74,13 @@ class ColumnRuleFollowers(ColumnMapMetricProvider):
         for name, rnge in rule["ranges"].items():
             if rnge[0] < rnge[1]:
                 strings[name] = str(x[rnge[0] : rnge[1]])
-                names += name + ","
+                names += f"{name},"
             else:
                 raise ValueError(
                     "Unexpected range. Ensure that the second number in your range is larger than the first."
                 )
 
-        exec("expr = lambda " + names + ":" + rule["expr"], None, ldict)
+        exec(f"expr = lambda {names}:" + rule["expr"], None, ldict)
         func = ldict["expr"]
         return func(**strings)
 

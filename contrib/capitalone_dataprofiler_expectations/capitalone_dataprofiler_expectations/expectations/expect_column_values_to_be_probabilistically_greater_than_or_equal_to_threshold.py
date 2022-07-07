@@ -40,7 +40,7 @@ class ColumnValuesConfidenceToBeGreaterThanOrEqualToThreshold(ColumnMapMetricPro
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls: Any, column: str, threshold: float, **kwargs: Any) -> np.ndarray:
+    def _pandas(self, column: str, threshold: float, **kwargs: Any) -> np.ndarray:
         """
         Implement the yes/no question for the expectation
         """

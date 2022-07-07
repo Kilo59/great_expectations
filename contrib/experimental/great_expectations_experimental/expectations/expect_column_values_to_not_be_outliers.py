@@ -44,7 +44,7 @@ class ColumnValuesNotOutliers(ColumnMapMetricProvider):
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, method="iqr", multiplier=1.5, **kwargs):
+    def _pandas(self, column, method="iqr", multiplier=1.5, **kwargs):
         if method == "iqr":
             iqr = stats.iqr(column)
             median = column.median()

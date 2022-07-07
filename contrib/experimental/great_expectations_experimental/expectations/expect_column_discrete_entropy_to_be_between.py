@@ -50,19 +50,12 @@ class ColumnDiscreteEntropy(ColumnMetricProvider):
     value_keys = ("base",)
 
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, base, **kwargs):
+    def _pandas(self, column, base, **kwargs):
         column_value_counts = column.value_counts()
         return scipy.stats.entropy(column_value_counts, base=base)
 
     @metric_value(engine=SqlAlchemyExecutionEngine, metric_fn_type="value")
-    def _sqlalchemy(
-        cls,
-        execution_engine: "SqlAlchemyExecutionEngine",
-        metric_domain_kwargs: Dict,
-        metric_value_kwargs: Dict,
-        metrics: Dict[Tuple, Any],
-        runtime_configuration: Dict,
-    ):
+    def _sqlalchemy(self, execution_engine: "SqlAlchemyExecutionEngine", metric_domain_kwargs: Dict, metric_value_kwargs: Dict, metrics: Dict[Tuple, Any], runtime_configuration: Dict):
         (
             selectable,
             compute_domain_kwargs,
@@ -76,14 +69,7 @@ class ColumnDiscreteEntropy(ColumnMetricProvider):
         return scipy.stats.entropy(column_value_counts, base=base)
 
     @metric_value(engine=SparkDFExecutionEngine, metric_fn_type="value")
-    def _spark(
-        cls,
-        execution_engine: "SparkDFExecutionEngine",
-        metric_domain_kwargs: Dict,
-        metric_value_kwargs: Dict,
-        metrics: Dict[Tuple, Any],
-        runtime_configuration: Dict,
-    ):
+    def _spark(self, execution_engine: "SparkDFExecutionEngine", metric_domain_kwargs: Dict, metric_value_kwargs: Dict, metrics: Dict[Tuple, Any], runtime_configuration: Dict):
         (
             df,
             compute_domain_kwargs,
@@ -124,8 +110,8 @@ class ColumnDiscreteEntropy(ColumnMetricProvider):
             }
         )
 
-        if isinstance(execution_engine, SqlAlchemyExecutionEngine) or isinstance(
-            execution_engine, SparkDFExecutionEngine
+        if isinstance(
+            execution_engine, (SqlAlchemyExecutionEngine, SparkDFExecutionEngine)
         ):
             dependencies["column_values.nonnull.count"] = MetricConfiguration(
                 "column_values.nonnull.count", metric.metric_domain_kwargs
@@ -335,7 +321,7 @@ class ExpectColumnDiscreteEntropyToBeBetween(ColumnExpectation):
                 template_str = f"discrete entropy must be {at_least_str} $min_value and {at_most_str} $max_value."
             elif params["min_value"] is None:
                 template_str = f"discrete entropy must be {at_most_str} $max_value."
-            elif params["max_value"] is None:
+            else:
                 template_str = f"discrete entropy must be {at_least_str} $min_value."
 
         if include_column_name:

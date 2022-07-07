@@ -27,7 +27,7 @@ class ColumnPairValuesLatLngMatchesGeohash(ColumnPairMapMetricProvider):
 
     # noinspection PyPep8Naming
     @column_pair_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column_A, column_B, **kwargs):
+    def _pandas(self, column_A, column_B, **kwargs):
         df = pd.DataFrame(column_A).join(column_B)
         return df.apply(lambda x: compare(x), axis=1)
 

@@ -19,10 +19,7 @@ from great_expectations.expectations.metrics import (
 
 
 def is_valid_tld(tld: str, valid_tlds) -> bool:
-    if tld.upper() in valid_tlds:
-        return True
-    else:
-        return False
+    return tld.upper() in valid_tlds
 
 
 # This class defines a Metric to support your Expectation.
@@ -39,8 +36,8 @@ class ColumnValuesToBeValidTld(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
-        return column.apply(lambda x: is_valid_tld(x, cls.valid_tlds))
+    def _pandas(self, column, **kwargs):
+        return column.apply(lambda x: is_valid_tld(x, self.valid_tlds))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine
     # @column_condition_partial(engine=SqlAlchemyExecutionEngine)

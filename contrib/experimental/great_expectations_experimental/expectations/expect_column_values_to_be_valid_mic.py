@@ -20,10 +20,7 @@ from great_expectations.expectations.metrics import (
 
 def is_valid_mic(mic_code: str, df) -> bool:
     try:
-        if mic_code.upper() in df["MIC"].unique():
-            return True
-        else:
-            return False
+        return mic_code.upper() in df["MIC"].unique()
     except Exception as e:
         return False
 
@@ -40,8 +37,8 @@ class ColumnValuesToBeValidMic(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
-        return column.apply(lambda x: is_valid_mic(x, cls.df))
+    def _pandas(self, column, **kwargs):
+        return column.apply(lambda x: is_valid_mic(x, self.df))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine
     # @column_condition_partial(engine=SqlAlchemyExecutionEngine)

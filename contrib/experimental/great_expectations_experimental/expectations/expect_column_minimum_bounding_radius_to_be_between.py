@@ -32,7 +32,7 @@ class ColumnAggregateGeometryBoundingRadius(ColumnAggregateMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
 
         column_shape_format = kwargs.get("column_shape_format")
 
@@ -49,8 +49,7 @@ class ColumnAggregateGeometryBoundingRadius(ColumnAggregateMetricProvider):
 
         shape_test = geos.union_all(shape_test)
 
-        radius = geos.minimum_bounding_radius(shape_test)
-        return radius
+        return geos.minimum_bounding_radius(shape_test)
 
     # This method defines the business logic for evaluating your Metric when using a SqlAlchemyExecutionEngine
     # @column_aggregate_partial(engine=SqlAlchemyExecutionEngine)
@@ -258,33 +257,20 @@ class ExpectColumnMininumBoundingRadiusToBeBetween(ColumnExpectation):
         strict_min = self.get_success_kwargs(configuration).get("strict_min")
         strict_max = self.get_success_kwargs(configuration).get("strict_max")
 
-        if diameter_flag:
-            distance = radius * 2
-        else:
-            distance = radius
-
+        distance = radius * 2 if diameter_flag else radius
         # Evaluate the between statement (from column_values_between.py)
         if min_value is None:
-            if strict_max:
-                success = distance < max_value
-            else:
-                success = distance <= max_value
-
+            success = distance < max_value if strict_max else distance <= max_value
         elif max_value is None:
-            if strict_min:
-                success = min_value < distance
-            else:
-                success = min_value <= distance
-
+            success = min_value < distance if strict_min else min_value <= distance
+        elif strict_min and strict_max:
+            success = (min_value < distance) & (distance < max_value)
+        elif strict_min:
+            success = (min_value < distance) & (distance <= max_value)
+        elif strict_max:
+            success = (min_value <= distance) & (distance < max_value)
         else:
-            if strict_min and strict_max:
-                success = (min_value < distance) & (distance < max_value)
-            elif strict_min:
-                success = (min_value < distance) & (distance <= max_value)
-            elif strict_max:
-                success = (min_value <= distance) & (distance < max_value)
-            else:
-                success = (min_value <= distance) & (distance <= max_value)
+            success = (min_value <= distance) & (distance <= max_value)
 
         return {"success": success, "result": {"observed_value": distance}}
 

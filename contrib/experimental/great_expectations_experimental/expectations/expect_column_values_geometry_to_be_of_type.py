@@ -33,7 +33,7 @@ class ColumnValuesGeometryOfType(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, geom_types_list, **kwargs):
+    def _pandas(self, column, geom_types_list, **kwargs):
         # We use the mapping and shape functions to serialize and deserialize the geometry objects
         column = column.apply(shape)
         return column.apply(lambda value: value.geom_type in geom_types_list)

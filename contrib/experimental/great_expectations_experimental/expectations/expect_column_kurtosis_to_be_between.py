@@ -49,7 +49,7 @@ class ColumnKurtosis(ColumnMetricProvider):
     metric_name = "column.custom.kurtosis"
 
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return stats.kurtosis(column)
 
     # @metric_value(engine=SqlAlchemyExecutionEngine, metric_fn_type="value")

@@ -30,14 +30,13 @@ class ColumnValuesLinestringKMDistanceBetween(ColumnMapMetricProvider):
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, min_distance, max_distance, **kwargs):
+    def _pandas(self, column, min_distance, max_distance, **kwargs):
         column = column.apply(shape)
         # Set crs to meters
         geo_ser = geopandas.GeoSeries(column, crs={"proj": "cea"})
         # access the length of the column
         col_len = geo_ser.length / 1000
-        in_between = (col_len >= min_distance) & (col_len <= max_distance)
-        return in_between
+        return (col_len >= min_distance) & (col_len <= max_distance)
 
 
 # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

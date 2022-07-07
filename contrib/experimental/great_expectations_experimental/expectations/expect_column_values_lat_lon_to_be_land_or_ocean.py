@@ -33,7 +33,7 @@ class ColumnValuesLatLonLandOrOcean(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, land_or_ocean="land", **kwargs):
+    def _pandas(self, column, land_or_ocean="land", **kwargs):
 
         if land_or_ocean == "land":
             return column.apply(lambda point: globe.is_land(point[0], point[1]))

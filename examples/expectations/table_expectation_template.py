@@ -33,14 +33,7 @@ class TableMeetsSomeCriteria(TableMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @metric_value(engine=PandasExecutionEngine)
-    def _pandas(
-        cls,
-        execution_engine,
-        metric_domain_kwargs,
-        metric_value_kwargs,
-        metrics,
-        runtime_configuration,
-    ):
+    def _pandas(self, execution_engine, metric_domain_kwargs, metric_value_kwargs, metrics, runtime_configuration):
         raise NotImplementedError
 
     # @metric_value(engine=SqlAlchemyExecutionEngine)

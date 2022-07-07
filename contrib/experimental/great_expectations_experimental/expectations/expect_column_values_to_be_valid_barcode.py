@@ -34,7 +34,7 @@ class ColumnValuesToBeValidBarcode(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, barcode_type, **kwargs):
+    def _pandas(self, column, barcode_type, **kwargs):
         return column.apply(lambda x: is_valid_barcode(x, barcode_type))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

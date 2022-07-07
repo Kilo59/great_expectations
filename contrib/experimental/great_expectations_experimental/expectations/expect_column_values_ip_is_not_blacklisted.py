@@ -21,10 +21,7 @@ from great_expectations.expectations.metrics import (
 def is_not_blacklisted(ip_addr: str) -> bool:
     ip_checker = pydnsbl.DNSBLIpChecker()
     res = ip_checker.check(ip_addr)
-    if res.blacklisted:
-        return False
-    else:
-        return True
+    return not res.blacklisted
 
 
 # This class defines a Metric to support your Expectation.
@@ -36,7 +33,7 @@ class ColumnValuesIpIsNotBlacklisted(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_not_blacklisted(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

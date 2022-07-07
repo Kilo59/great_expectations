@@ -57,7 +57,7 @@ class ColumnValuesToBeValidUrls(ColumnMapMetricProvider):
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: fits_regex(x))
 
 

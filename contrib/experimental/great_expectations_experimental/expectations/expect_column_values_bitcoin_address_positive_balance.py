@@ -22,14 +22,10 @@ from great_expectations.expectations.metrics import (
 def has_btc_address_positive_balance(addr: str) -> bool:
     try:
         res = coinaddrvalidator.validate("btc", addr).valid
-        if res == True:
-            balance = blockcypher.get_total_balance(addr)
-            if balance > 0:
-                return True
-            else:
-                return False
-        else:
+        if res != True:
             return False
+        balance = blockcypher.get_total_balance(addr)
+        return balance > 0
     except Exception as e:
         return False
 
@@ -43,7 +39,7 @@ class ColumnValuesBitcoinAddressPositiveBalance(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: has_btc_address_positive_balance(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

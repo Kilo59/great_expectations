@@ -177,17 +177,15 @@ class ValidationsStore(Store):
             return self._expectationSuiteValidationResultSchema.loads(value)
 
     def self_check(self, pretty_print):
-        return_obj = {}
-
         if pretty_print:
             print("Checking for existing keys...")
 
-        return_obj["keys"] = self.list_keys()
+        return_obj = {"keys": self.list_keys()}
         return_obj["len_keys"] = len(return_obj["keys"])
-        len_keys = return_obj["len_keys"]
-
         if pretty_print:
-            if return_obj["len_keys"] == 0:
+            len_keys = return_obj["len_keys"]
+
+            if len_keys == 0:
                 print(f"\t{len_keys} keys found")
             else:
                 print(f"\t{len_keys} keys found:")
@@ -198,8 +196,9 @@ class ValidationsStore(Store):
             print()
 
         test_key_name = "test-key-" + "".join(
-            [random.choice(list("0123456789ABCDEF")) for i in range(20)]
+            [random.choice(list("0123456789ABCDEF")) for _ in range(20)]
         )
+
 
         if self.ge_cloud_mode:
             test_key: GeCloudIdentifier = self.key_class(

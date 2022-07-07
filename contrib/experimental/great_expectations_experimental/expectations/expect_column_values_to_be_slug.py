@@ -19,10 +19,7 @@ from great_expectations.expectations.metrics import (
 
 def is_valid_slug(slug: str) -> bool:
     slug_pattern = re.compile("^[-a-zA-Z0-9_]+\Z")
-    if slug_pattern.match(slug):
-        return True
-    else:
-        return False
+    return bool(slug_pattern.match(slug))
 
 
 # This class defines a Metric to support your Expectation.
@@ -34,7 +31,7 @@ class ColumnValuesToBeSlug(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_slug(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

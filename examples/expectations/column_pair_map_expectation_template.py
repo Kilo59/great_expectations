@@ -39,7 +39,7 @@ class ColumnPairValuesMatchSomeCriteria(ColumnPairMapMetricProvider):
     # This method implements the core logic for the PandasExecutionEngine
     # <snippet>
     @column_pair_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column_A, column_B, **kwargs):
+    def _pandas(self, column_A, column_B, **kwargs):
         raise NotImplementedError
 
     # </snippet>

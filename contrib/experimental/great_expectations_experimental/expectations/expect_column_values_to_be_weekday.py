@@ -21,17 +21,11 @@ from great_expectations.expectations.metrics import (
 
 def is_weekday(ds) -> bool:
     try:
-        if isinstance(ds, str):
-            d = parse(ds)
-        else:
-            d = ds
+        d = parse(ds) if isinstance(ds, str) else ds
         print(d)
     except Exception as e:
         return False
-    if not d.weekday() > 4:
-        return True
-    else:
-        return False
+    return d.weekday() <= 4
 
 
 # This class defines a Metric to support your Expectation.
@@ -43,7 +37,7 @@ class ColumnValuesToBeWeekday(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_weekday(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

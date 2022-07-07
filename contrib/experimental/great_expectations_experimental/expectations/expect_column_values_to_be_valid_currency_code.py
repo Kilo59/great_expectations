@@ -34,7 +34,7 @@ class ColumnValuesCurrencyCode(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
 
         currency_codes: Tuple[str] = generate_all_currency_codes()
 

@@ -41,10 +41,7 @@ class ColumnValuesToNotContainSpecialCharacters(ColumnMapMetricProvider):
     @column_condition_partial(engine=PandasExecutionEngine)
     def _pandas(cls, column, **kwargs):
         def not_contain_special_character(val, *special_characters):
-            for c in special_characters:
-                if c in str(val):
-                    return False
-            return True
+            return all(c not in str(val) for c in special_characters)
 
         return column.apply(
             not_contain_special_character, args=(list(string.punctuation))
@@ -150,14 +147,14 @@ class ExpectColumnValuesToNotContainSpecialCharacters(ColumnMapExpectation):
             template_str += "."
 
         if include_column_name:
-            template_str = "$column " + template_str
+            template_str = f"$column {template_str}"
 
         if params["row_condition"] is not None:
             (
                 conditional_template_str,
                 conditional_params,
             ) = parse_row_condition_string_pandas_engine(params["row_condition"])
-            template_str = conditional_template_str + ", then " + template_str
+            template_str = f"{conditional_template_str}, then {template_str}"
             params.update(conditional_params)
 
         return [

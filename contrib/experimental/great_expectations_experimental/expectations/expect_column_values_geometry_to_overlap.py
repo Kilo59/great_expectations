@@ -29,7 +29,7 @@ class ColumnValuesToCheckOverlap(ColumnAggregateMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         geo_ser = geopandas.GeoSeries(column)
         input_indices, result_indices = geo_ser.sindex.query_bulk(
             geo_ser.geometry, predicate="overlaps"

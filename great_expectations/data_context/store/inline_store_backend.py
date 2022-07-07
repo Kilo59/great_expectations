@@ -130,16 +130,13 @@ class InlineStoreBackend(StoreBackend):
         keys: List[str]
         config_dict: dict = self._data_context.config.to_dict()
         if config_section is None:
-            keys = list(key for key in config_dict.keys())
-        else:
-            config_values: dict = config_dict[config_section]
-            if not isinstance(config_values, dict):
-                raise StoreBackendError(
-                    "Cannot list keys in a non-iterable section of a project config"
-                )
-            keys = list(key for key in config_values.keys())
-
-        return keys
+            return list(config_dict)
+        config_values: dict = config_dict[config_section]
+        if not isinstance(config_values, dict):
+            raise StoreBackendError(
+                "Cannot list keys in a non-iterable section of a project config"
+            )
+        return list(config_values)
 
     def remove_key(self, key: Tuple[str, ...]) -> None:
         """

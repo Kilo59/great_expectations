@@ -227,9 +227,10 @@ def measure_execution_time(
                         )
                         call_args: OrderedDict = bound_args.arguments
                         print(
-                            f"""Total execution time of function {func.__name__}({str(dict(call_args))}): {delta_t} \
+                            f"""Total execution time of function {func.__name__}({dict(call_args)}): {delta_t} \
 seconds."""
                         )
+
                     else:
                         print(
                             f"Total execution time of function {func.__name__}(): {delta_t} seconds."
@@ -260,13 +261,12 @@ def get_currently_executing_function() -> Callable:
     cf: FrameType = currentframe()
     fb: FrameType = cf.f_back
     fc: CodeType = fb.f_code
-    func_obj: Callable = [
+    return [
         referer
         for referer in get_referrers(fc)
         if getattr(referer, "__code__", None) is fc
         and getclosurevars(referer).nonlocals.items() <= fb.f_locals.items()
     ][0]
-    return func_obj
 
 
 # noinspection SpellCheckingInspection
@@ -322,10 +322,10 @@ def get_currently_executing_function_call_arguments(
 
     for key, value in var_keyword.items():
         call_args_dict.pop(key)
-        call_args_dict.update(value)
+        call_args_dict |= value
 
     if include_module_name:
-        call_args_dict.update({"module_name": cur_mod.__name__})
+        call_args_dict["module_name"] = cur_mod.__name__
 
     if not include_caller_names:
         if call_args.get("cls"):
@@ -953,12 +953,8 @@ def validate(
 
     from great_expectations.dataset import Dataset, PandasDataset
 
-    if data_asset_class is None:
-        # Guess the GE data_asset_type based on the type of the data_asset
-        if isinstance(data_asset, pd.DataFrame):
-            data_asset_class = PandasDataset
-        # Add other data_asset_type conditions here as needed
-
+    if data_asset_class is None and isinstance(data_asset, pd.DataFrame):
+        data_asset_class = PandasDataset
     # Otherwise, we will convert for the user to a subclass of the
     # existing class to enable new expectations, but only for datasets
     if not isinstance(data_asset, (Dataset, pd.DataFrame)):
@@ -967,15 +963,13 @@ def validate(
             "asset types, use the object's own validate method."
         )
 
-    if not issubclass(type(data_asset), data_asset_class):
-        if isinstance(data_asset, pd.DataFrame) and issubclass(
-            data_asset_class, PandasDataset
-        ):
-            pass  # This is a special type of allowed coercion
-        else:
-            raise ValueError(
-                "The validate util method only supports validation for subtypes of the provided data_asset_type."
-            )
+    if not issubclass(type(data_asset), data_asset_class) and (
+        not isinstance(data_asset, pd.DataFrame)
+        or not issubclass(data_asset_class, PandasDataset)
+    ):
+        raise ValueError(
+            "The validate util method only supports validation for subtypes of the provided data_asset_type."
+        )
 
     data_asset_ = _convert_to_dataset_class(
         data_asset, dataset_class=data_asset_class, expectation_suite=expectation_suite
@@ -999,9 +993,7 @@ def gen_directory_tree_str(startpath):
 
     output_str = ""
 
-    tuples = list(os.walk(startpath))
-    tuples.sort()
-
+    tuples = sorted(os.walk(startpath))
     for root, dirs, files in tuples:
         level = root.replace(startpath, "").count(os.sep)
         indent = " " * 4 * level
@@ -1031,8 +1023,7 @@ def lint_code(code: str) -> str:
     if not isinstance(code, str):
         raise TypeError
     try:
-        linted_code = black.format_file_contents(code, fast=True, mode=black_file_mode)
-        return linted_code
+        return black.format_file_contents(code, fast=True, mode=black_file_mode)
     except (black.NothingChanged, RuntimeError):
         return code
 
@@ -1287,15 +1278,12 @@ def _is_to_be_removed_from_deep_filter_properties_iterable(
         not keep_falsy_numerics and is_numeric(value) and value == 0,
         clean_falsy and not is_numeric(value) and not value,
     )
-    return any(condition for condition in conditions)
+    return any(conditions)
 
 
 def is_truthy(value: Any) -> bool:
     try:
-        if value:
-            return True
-        else:
-            return False
+        return bool(value)
     except ValueError:
         return False
 
@@ -1391,7 +1379,7 @@ def is_sane_slack_webhook(url: str) -> bool:
 
 
 def is_list_of_strings(_list) -> bool:
-    return isinstance(_list, list) and all([isinstance(site, str) for site in _list])
+    return isinstance(_list, list) and all(isinstance(site, str) for site in _list)
 
 
 def generate_library_json_from_registered_expectations():
@@ -1413,26 +1401,23 @@ def generate_temporary_table_name(
     default_table_name_prefix: str = "ge_temp_",
     num_digits: int = 8,
 ) -> str:
-    table_name: str = f"{default_table_name_prefix}{str(uuid.uuid4())[:num_digits]}"
-    return table_name
+    return f"{default_table_name_prefix}{str(uuid.uuid4())[:num_digits]}"
 
 
 def get_sqlalchemy_inspector(engine):
-    if version.parse(sa.__version__) < version.parse("1.4"):
-        # Inspector.from_engine deprecated since 1.4, sa.inspect() should be used instead
-        insp = reflection.Inspector.from_engine(engine)
-    else:
-        insp = sa.inspect(engine)
-    return insp
+    return (
+        reflection.Inspector.from_engine(engine)
+        if version.parse(sa.__version__) < version.parse("1.4")
+        else sa.inspect(engine)
+    )
 
 
 def get_sqlalchemy_url(drivername, **credentials):
-    if version.parse(sa.__version__) < version.parse("1.4"):
-        # Calling URL() deprecated since 1.4, URL.create() should be used instead
-        url = sa.engine.url.URL(drivername, **credentials)
-    else:
-        url = sa.engine.url.URL.create(drivername, **credentials)
-    return url
+    return (
+        sa.engine.url.URL(drivername, **credentials)
+        if version.parse(sa.__version__) < version.parse("1.4")
+        else sa.engine.url.URL.create(drivername, **credentials)
+    )
 
 
 def get_sqlalchemy_selectable(selectable: Union[Table, Select]) -> Union[Table, Select]:
@@ -1479,22 +1464,18 @@ def import_make_url():
 def get_pyathena_potential_type(type_module, type_):
     if version.parse(type_module.pyathena.__version__) >= version.parse("2.5.0"):
         # introduction of new column type mapping in 2.5
-        potential_type = type_module.AthenaDialect()._get_column_type(type_)
-    else:
-        if type_ == "string":
-            type_ = "varchar"
+        return type_module.AthenaDialect()._get_column_type(type_)
+    if type_ == "string":
+        type_ = "varchar"
         # < 2.5 column type mapping
-        potential_type = type_module._TYPE_MAPPINGS.get(type_)
-
-    return potential_type
+    return type_module._TYPE_MAPPINGS.get(type_)
 
 
 def get_trino_potential_type(type_module: ModuleType, type_: str) -> object:
     """
     Leverage on Trino Package to return sqlalchemy sql type
     """
-    potential_type = type_module.parse_sqltype(type_)
-    return potential_type
+    return type_module.parse_sqltype(type_)
 
 
 def pandas_series_between_inclusive(
@@ -1504,12 +1485,11 @@ def pandas_series_between_inclusive(
     As of Pandas 1.3.0, the 'inclusive' arg in between() is an enum: {"left", "right", "neither", "both"}
     """
     metric_series: pd.Series
-    if version.parse(pd.__version__) >= version.parse("1.3.0"):
-        metric_series = series.between(min_value, max_value, inclusive="both")
-    else:
-        metric_series = series.between(min_value, max_value, inclusive=True)
-
-    return metric_series
+    return (
+        series.between(min_value, max_value, inclusive="both")
+        if version.parse(pd.__version__) >= version.parse("1.3.0")
+        else series.between(min_value, max_value, inclusive=True)
+    )
 
 
 def numpy_quantile(
@@ -1520,18 +1500,18 @@ def numpy_quantile(
     Source: https://numpy.org/doc/stable/reference/generated/numpy.quantile.html
     """
     quantile: np.ndarray
-    if version.parse(np.__version__) >= version.parse("1.22.0"):
-        quantile = np.quantile(
+    return (
+        np.quantile(
             a=a,
             q=q,
             axis=axis,
             method=method,
         )
-    else:
-        quantile = np.quantile(
+        if version.parse(np.__version__) >= version.parse("1.22.0")
+        else np.quantile(
             a=a,
             q=q,
             axis=axis,
             interpolation=method,
         )
-    return quantile
+    )

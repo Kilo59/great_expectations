@@ -161,22 +161,17 @@ class GeCloudStoreBackend(StoreBackend, metaclass=ABCMeta):
 
     def validate_set_kwargs(self, kwargs: dict) -> Optional[bool]:
         kwarg_names = set(kwargs.keys())
-        if len(kwarg_names) == 0:
+        if not kwarg_names:
             return True
         if kwarg_names <= self.allowed_set_kwargs:
             return True
-        if not (kwarg_names <= self.allowed_set_kwargs):
-            extra_kwargs = kwarg_names - self.allowed_set_kwargs
-            raise ValueError(f'Invalid kwargs: {(", ").join(extra_kwargs)}')
+        extra_kwargs = kwarg_names - self.allowed_set_kwargs
+        raise ValueError(f'Invalid kwargs: {(", ").join(extra_kwargs)}')
 
     def _set(
         self, key: Tuple[str, ...], value: Any, **kwargs: dict
     ) -> Union[bool, GeCloudResourceRef]:
-        # Each resource type has corresponding attribute key to include in POST body
-        ge_cloud_id = key[1]
-
-        # if key has ge_cloud_id, perform _update instead
-        if ge_cloud_id:
+        if ge_cloud_id := key[1]:
             return self._update(ge_cloud_id=ge_cloud_id, value=value, **kwargs)
 
         resource_type = self.ge_cloud_resource_type
@@ -244,14 +239,14 @@ class GeCloudStoreBackend(StoreBackend, metaclass=ABCMeta):
         try:
             response = requests.get(url, headers=self.auth_headers)
             response_json = response.json()
-            keys = [
+            return [
                 (
                     self.ge_cloud_resource_type,
                     resource["id"],
                 )
                 for resource in response_json.get("data")
             ]
-            return keys
+
         except Exception as e:
             logger.debug(str(e))
             raise StoreBackendError(
@@ -262,11 +257,10 @@ class GeCloudStoreBackend(StoreBackend, metaclass=ABCMeta):
         self, key: Tuple[str, ...], protocol: Optional[Any] = None
     ) -> str:
         ge_cloud_id = key[1]
-        url = urljoin(
+        return urljoin(
             self.ge_cloud_base_url,
             f"organizations/{self.ge_cloud_credentials['organization_id']}/{hyphen(self.ge_cloud_resource_name)}/{ge_cloud_id}",
         )
-        return url
 
     def remove_key(self, key):
         if not isinstance(key, tuple):

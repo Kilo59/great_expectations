@@ -16,16 +16,13 @@ from great_expectations.expectations.metrics import (
 def is_valid_country(country: str):
     geocache = geonamescache.GeonamesCache()
     dict_of_countries = geocache.get_countries()
-    list_of_countries = [d for d in dict_of_countries.values()]
+    list_of_countries = list(dict_of_countries.values())
     list_of_country_names = [item["name"] for item in list_of_countries]
-    if len(country) > 252:
-        return False
-    elif type(country) != str:
-        return False
-    elif country in list_of_country_names:
-        return True
-    else:
-        return False
+    return (
+        len(country) <= 252
+        and type(country) == str
+        and country in list_of_country_names
+    )
 
 
 # This class defines a Metric to support your Expectation.
@@ -37,7 +34,7 @@ class ColumnValuesToBeValidCountry(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_country(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

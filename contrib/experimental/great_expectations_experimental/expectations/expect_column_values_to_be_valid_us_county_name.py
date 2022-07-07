@@ -17,14 +17,9 @@ def is_valid_us_county_name(county: str):
     geocache = geonamescache.GeonamesCache()
     dict_of_counties = geocache.get_us_counties()
     list_of_counties = [d["name"] for d in dict_of_counties if "name" in d]
-    if len(county) > 33:
+    if len(county) > 33 or type(county) != str:
         return False
-    elif type(county) != str:
-        return False
-    if county in list_of_counties:
-        return True
-    else:
-        return False
+    return county in list_of_counties
 
 
 # This class defines a Metric to support your Expectation.
@@ -36,7 +31,7 @@ class ColumnValuesToBeValidUSCountyName(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_us_county_name(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

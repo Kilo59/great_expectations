@@ -239,11 +239,7 @@ class GEDependencies:
         dependency_matches = [
             re.search(r"^(?!--requirement)([\w\-.]+)", s) for s in dependencies
         ]
-        dependency_names: List[str] = []
-        for match in dependency_matches:
-            if match is not None:
-                dependency_names.append(match.group(0))
-        return dependency_names
+        return [match.group(0) for match in dependency_matches if match is not None]
 
 
 def main() -> None:

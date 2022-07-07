@@ -134,7 +134,7 @@ def build_gallery(
         None
 
     """
-    gallery_info = dict()
+    gallery_info = {}
     requirements_dict = {}
     logger.info("Loading great_expectations library.")
     installed_packages = pkg_resources.working_set
@@ -187,9 +187,11 @@ def build_gallery(
                     requirements_dict[filename[:-3]]["group"] = contrib_subdir_name
 
     for expectation in sorted(requirements_dict):
-        if only_these_expectations:
-            if expectation not in only_these_expectations:
-                continue
+        if (
+            only_these_expectations
+            and expectation not in only_these_expectations
+        ):
+            continue
         # Temp
         if expectation == "expect_column_kl_divergence_to_be_less_than":
             continue
@@ -199,8 +201,9 @@ def build_gallery(
         parsed_requirements = pkg_resources.parse_requirements(requirements)
         for req in parsed_requirements:
             is_satisfied = any(
-                [installed_pkg in req for installed_pkg in installed_packages]
+                installed_pkg in req for installed_pkg in installed_packages
             )
+
             if is_satisfied or req in just_installed:
                 continue
             logger.debug(f"Executing command: 'pip install \"{req}\"'")
@@ -220,7 +223,7 @@ def build_gallery(
                     importlib.import_module(f"expectations.{expectation}", group)
                 else:
                     importlib.import_module(f"{group}.expectations")
-            except (ModuleNotFoundError, ImportError) as e:
+            except ImportError as e:
                 logger.error(f"Failed to load expectation: {expectation}")
                 print(traceback.format_exc())
                 expectation_tracebacks.write(
@@ -266,8 +269,9 @@ def build_gallery(
     if just_installed:
         print("\n\n\n=== (Uninstalling) ===")
         logger.info(
-            f"Uninstalling packages that were installed while running this script..."
+            "Uninstalling packages that were installed while running this script..."
         )
+
         for req in just_installed:
             logger.debug(f"Executing command: 'pip uninstall -y \"{req}\"'")
             execute_shell_command(f'pip uninstall -y "{req}"')
@@ -323,17 +327,16 @@ def build_gallery(
             "expectations",
             "core",
         )
-        core_expectations_filename_set = set(
-            [
-                fname.rsplit(".", 1)[0]
-                for fname in os.listdir(core_dir)
-                if fname.startswith("expect_")
-            ]
-        )
-        core_expectations_not_in_gallery = core_expectations_filename_set - set(
-            core_expectations
-        )
-        if core_expectations_not_in_gallery:
+        core_expectations_filename_set = {
+            fname.rsplit(".", 1)[0]
+            for fname in os.listdir(core_dir)
+            if fname.startswith("expect_")
+        }
+
+        if (
+            core_expectations_not_in_gallery := core_expectations_filename_set
+            - set(core_expectations)
+        ):
             expectation_tracebacks.write(f"\n\n----------------\n(Not a traceback)\n")
             expectation_tracebacks.write(
                 f"Core Expectation files not included in core_expectations:\n"
@@ -371,7 +374,6 @@ def format_docstring_to_markdown(docstr: str) -> str:
             in_code_block = True
             clean_docstr_list.append("```")
 
-        # All of our parameter/arg/etc lists start after a line ending in ':'.
         elif line.strip().endswith(":"):
             in_param = True
             # This adds a blank line before the header if one doesn't already exist.
@@ -390,29 +392,22 @@ def format_docstring_to_markdown(docstr: str) -> str:
             in_code_block = False
             first_code_indentation = None
             clean_docstr_list.append(line)
-        else:
-            if in_code_block:
+        elif in_code_block:
                 # Determine the number of spaces indenting the first line of code so they can be removed from all lines
                 # in the code block without wrecking the hierarchical indentation levels of future lines.
-                if first_code_indentation == None and line.strip() != "":
-                    first_code_indentation = len(
-                        re.match(r"\s*", original_line, re.UNICODE).group(0)
-                    )
-                if line.strip() == "" and prev_line == "::":
-                    # If the first line of the code block is a blank one, just skip it.
-                    pass
-                else:
-                    # Append the line of code, minus the extra indentation from being written in an indented docstring.
-                    clean_docstr_list.append(original_line[first_code_indentation:])
-            elif ":" in line.replace(":ref:", "") and in_param:
-                # This indicates a parameter. arg. or other definition.
-                clean_docstr_list.append(f"- {line.strip()}")
-            else:
-                # This indicates a regular line of text.
-                clean_docstr_list.append(f"{line.strip()}")
+            if first_code_indentation is None and line.strip() != "":
+                first_code_indentation = len(re.match(r"\s*", original_line, re.UNICODE)[0])
+            if line.strip() != "" or prev_line != "::":
+                # Append the line of code, minus the extra indentation from being written in an indented docstring.
+                clean_docstr_list.append(original_line[first_code_indentation:])
+        elif ":" in line.replace(":ref:", "") and in_param:
+            # This indicates a parameter. arg. or other definition.
+            clean_docstr_list.append(f"- {line.strip()}")
+        else:
+            # This indicates a regular line of text.
+            clean_docstr_list.append(f"{line.strip()}")
         prev_line = line.strip()
-    clean_docstr = "\n".join(clean_docstr_list)
-    return clean_docstr
+    return "\n".join(clean_docstr_list)
 
 
 @click.command()

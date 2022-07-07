@@ -25,33 +25,42 @@ class DataContextKey(metaclass=ABCMeta):
         raise NotImplementedError
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            # Delegate comparison to the other instance's __eq__.
-            return NotImplemented
-        return self.to_tuple() == other.to_tuple()
+        return (
+            self.to_tuple() == other.to_tuple()
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
 
     def __ne__(self, other):
         return not self == other
 
     def __lt__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.to_tuple() < other.to_tuple()
+        return (
+            self.to_tuple() < other.to_tuple()
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
 
     def __le__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.to_tuple() <= other.to_tuple()
+        return (
+            self.to_tuple() <= other.to_tuple()
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
 
     def __gt__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.to_tuple() > other.to_tuple()
+        return (
+            self.to_tuple() > other.to_tuple()
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
 
     def __ge__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.to_tuple() >= other.to_tuple()
+        return (
+            self.to_tuple() >= other.to_tuple()
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
 
     def __hash__(self):
         return hash(self.to_tuple())

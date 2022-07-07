@@ -35,7 +35,7 @@ class ColumnValuesIanaTimezone(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
 
         return column.apply(lambda x: is_valid_timezone(x))
 
@@ -46,7 +46,7 @@ class ColumnValuesIanaTimezone(ColumnMapMetricProvider):
 
     # This method defines the business logic for evaluating your metric when using a SparkDFExecutionEngine
     @column_condition_partial(engine=SparkDFExecutionEngine)
-    def _spark(cls, column, **kwargs):
+    def _spark(self, column, **kwargs):
 
         tz_udf = F.udf(is_valid_timezone, sparktypes.BooleanType())
 

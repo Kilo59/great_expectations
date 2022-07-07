@@ -25,10 +25,7 @@ def is_gtin_variable_measure_trade_item(gtin_value: str) -> bool:
         gtin_obj = gtin.GTIN(gtin_value)
     except Exception as e:
         return False
-    if gtin_obj.indicator_digit == "9":
-        return True
-    else:
-        return False
+    return gtin_obj.indicator_digit == "9"
 
 
 # This class defines a Metric to support your Expectation.
@@ -40,7 +37,7 @@ class ColumnValuesToBeGtinVariableMeasureTradeItem(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_gtin_variable_measure_trade_item(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

@@ -34,7 +34,7 @@ class ColumnValuesToBeValidGeometry(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         geo = geopandas.GeoSeries(column)
         return geo.apply(lambda x: is_valid_geometry(x))
 

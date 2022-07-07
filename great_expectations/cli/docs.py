@@ -61,11 +61,7 @@ def docs_build(
             usage_event=usage_event_end,
             message=f"<red>The specified site name `{site_name}` does not exist in this project.</red>",
         )
-    if site_name is None:
-        sites_to_build = context.get_site_names()
-    else:
-        sites_to_build = [site_name]
-
+    sites_to_build = context.get_site_names() if site_name is None else [site_name]
     build_docs(
         context,
         usage_stats_event=usage_event_end,
@@ -143,7 +139,7 @@ def docs_clean(
     context = ctx.obj.data_context
     usage_event_end: str = ctx.obj.usage_event_end
 
-    if (site_name is None and all_sites is False) or (site_name and all_sites):
+    if site_name is None and not all_sites or (site_name and all_sites):
         toolkit.exit_with_failure_message_and_stats(
             data_context=context,
             usage_event=usage_event_end,

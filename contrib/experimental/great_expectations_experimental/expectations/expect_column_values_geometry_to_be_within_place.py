@@ -33,7 +33,7 @@ class ColumnValuesGeometryWithinPlace(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
 
         column_shape_format = kwargs.get("column_shape_format")
         place = kwargs.get("place")
@@ -50,7 +50,7 @@ class ColumnValuesGeometryWithinPlace(ColumnMapMetricProvider):
             try:
                 # Specify the default parameters for Nominatim and run query. User is responsible for config and query params otherwise.
                 query_params = dict(exactly_one=True, geometry="wkt")
-                location = cls.geocode(geocoder, geocoder_config, place, query_params)
+                location = self.geocode(geocoder, geocoder_config, place, query_params)
             except:
                 raise Exception(
                     "Geocoding configuration and query failed to produce a valid result."
@@ -87,8 +87,7 @@ class ColumnValuesGeometryWithinPlace(ColumnMapMetricProvider):
     def geocode(geocoder, config, query, query_config):
         cls = geopy.geocoders.get_geocoder_for_service(geocoder)
         geolocator = cls(**config)
-        location = geolocator.geocode(query, **query_config)
-        return location
+        return geolocator.geocode(query, **query_config)
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine
     # @column_condition_partial(engine=SqlAlchemyExecutionEngine)

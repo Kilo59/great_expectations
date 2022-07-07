@@ -108,43 +108,39 @@ class AbstractDataContext(ABC):
         global_data_context_id: Optional[str] = self._get_data_context_id_override()
         # data_context_id
         if global_data_context_id:
-            data_context_id_errors = anonymizedUsageStatisticsSchema.validate(
+            if data_context_id_errors := anonymizedUsageStatisticsSchema.validate(
                 {"data_context_id": global_data_context_id}
-            )
-            if not data_context_id_errors:
+            ):
+                validation_errors |= data_context_id_errors
+
+            else:
                 logger.info(
                     "data_context_id is defined globally. Applying override to project_config."
                 )
                 config_with_global_config_overrides.anonymous_usage_statistics.data_context_id = (
                     global_data_context_id
                 )
-            else:
-                validation_errors.update(data_context_id_errors)
-
         # usage statistics url
         global_usage_statistics_url: Optional[
             str
         ] = self._get_usage_stats_url_override()
         if global_usage_statistics_url:
-            usage_statistics_url_errors = anonymizedUsageStatisticsSchema.validate(
+            if usage_statistics_url_errors := anonymizedUsageStatisticsSchema.validate(
                 {"usage_statistics_url": global_usage_statistics_url}
-            )
-            if not usage_statistics_url_errors:
+            ):
+                validation_errors.update(usage_statistics_url_errors)
+            else:
                 logger.info(
                     "usage_statistics_url is defined globally. Applying override to project_config."
                 )
                 config_with_global_config_overrides.anonymous_usage_statistics.usage_statistics_url = (
                     global_usage_statistics_url
                 )
-            else:
-                validation_errors.update(usage_statistics_url_errors)
         if validation_errors:
             logger.warning(
-                "The following globally-defined config variables failed validation:\n{}\n\n"
-                "Please fix the variables if you would like to apply global values to project_config.".format(
-                    json.dumps(validation_errors, indent=2)
-                )
+                f"The following globally-defined config variables failed validation:\n{json.dumps(validation_errors, indent=2)}\n\nPlease fix the variables if you would like to apply global values to project_config."
             )
+
 
         return config_with_global_config_overrides
 
@@ -158,31 +154,31 @@ class AbstractDataContext(ABC):
             DataContextConfig,
             self._project_config,  # TODO: see if this can be resolved in a better way
         ).config_variables_file_path
-        if config_variables_file_path:
-            try:
-                # If the user specifies the config variable path with an environment variable, we want to substitute it
-                defined_path: str = substitute_config_variable(
-                    config_variables_file_path, dict(os.environ)
-                )
-                if not os.path.isabs(defined_path) and hasattr(self, "root_directory"):
-                    # A BaseDataContext will not have a root directory; in that case use the current directory
-                    # for any non-absolute path
-                    root_directory: str = self.root_directory or os.curdir
-                else:
-                    root_directory: str = ""
-                var_path = os.path.join(root_directory, defined_path)
-                with open(var_path) as config_variables_file:
-                    res = dict(
-                        yaml.load(config_variables_file)
-                    )  # TODO this is returning TextIO directly. Adjust to return
-                    # TextIOWrapper or str
-                    return res or {}
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
-                logger.debug("Generating empty config variables file.")
-                return {}
-        else:
+        if not config_variables_file_path:
+            return {}
+        try:
+            # If the user specifies the config variable path with an environment variable, we want to substitute it
+            defined_path: str = substitute_config_variable(
+                config_variables_file_path, dict(os.environ)
+            )
+            root_directory: str = (
+                self.root_directory or os.curdir
+                if not os.path.isabs(defined_path)
+                and hasattr(self, "root_directory")
+                else ""
+            )
+
+            var_path = os.path.join(root_directory, defined_path)
+            with open(var_path) as config_variables_file:
+                res = dict(
+                    yaml.load(config_variables_file)
+                )  # TODO this is returning TextIO directly. Adjust to return
+                # TextIOWrapper or str
+                return res or {}
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
+            logger.debug("Generating empty config variables file.")
             return {}
 
     @staticmethod
@@ -212,10 +208,9 @@ class AbstractDataContext(ABC):
             for config_path in AbstractDataContext.GLOBAL_CONFIG_PATHS:
                 config = configparser.ConfigParser()
                 config.read(config_path)
-                config_value = config.get(
+                if config_value := config.get(
                     conf_file_section, conf_file_option, fallback=None
-                )
-                if config_value:
+                ):
                     return config_value
         return None
 
@@ -234,10 +229,9 @@ class AbstractDataContext(ABC):
                 return True
             else:
                 logger.warning(
-                    "GE_USAGE_STATS environment variable must be one of: {}".format(
-                        AbstractDataContext.FALSEY_STRINGS
-                    )
+                    f"GE_USAGE_STATS environment variable must be one of: {AbstractDataContext.FALSEY_STRINGS}"
                 )
+
         for config_path in AbstractDataContext.GLOBAL_CONFIG_PATHS:
             config = configparser.ConfigParser()
             states = config.BOOLEAN_STATES
@@ -355,13 +349,11 @@ class AbstractDataContext(ABC):
             self.DOLLAR_SIGN_ESCAPE_STRING,
         )
 
-        substitutions = {
+        return {
             **substituted_config_variables,
             **dict(os.environ),
             **self.runtime_environment,
         }
-
-        return substitutions
 
     def get_config_with_variables_substituted(
         self, config: Optional[DataContextConfig] = None

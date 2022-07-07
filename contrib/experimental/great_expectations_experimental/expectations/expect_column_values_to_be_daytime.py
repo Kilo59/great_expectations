@@ -20,10 +20,7 @@ from great_expectations.expectations.metrics import (
 
 
 def is_daytime(ts, lat, lon) -> bool:
-    if isinstance(ts, str):
-        d = parse(ts)
-    else:
-        d = ts
+    d = parse(ts) if isinstance(ts, str) else ts
     try:
         obs = ephem.Observer()
         obs.lat = float(lat)
@@ -35,10 +32,7 @@ def is_daytime(ts, lat, lon) -> bool:
     rising_ts = obs.next_rising(ephem.Sun()).datetime()
     next_setting_ts = obs.next_setting(ephem.Sun()).datetime()
 
-    if d >= rising_ts and d < next_setting_ts:
-        return True
-    else:
-        return False
+    return d >= rising_ts and d < next_setting_ts
 
 
 # This class defines a Metric to support your Expectation.
@@ -54,7 +48,7 @@ class ColumnValuesToBeDaytime(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, lat, lon, **kwargs):
+    def _pandas(self, column, lat, lon, **kwargs):
         return column.apply(lambda x: is_daytime(x, lat, lon))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

@@ -29,10 +29,7 @@ def is_cert_match(host: str) -> bool:
         sock = context.wrap_socket(conn, server_hostname=host)
         sock.settimeout(1)
         cert = sock.getpeercert()
-        if ssl.match_hostname(cert, host) is None:
-            return True
-        else:
-            return False
+        return ssl.match_hostname(cert, host) is None
     except Exception as e:
         return False
 
@@ -46,7 +43,7 @@ class ColumnValuesUrlHostnameMatchWithCert(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_cert_match(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

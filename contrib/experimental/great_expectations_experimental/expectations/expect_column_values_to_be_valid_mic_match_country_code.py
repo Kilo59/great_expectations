@@ -22,10 +22,7 @@ def is_valid_mic_match_country_code(mic: str, country_code, df) -> bool:
     try:
         if mic.upper() in df["MIC"].unique():
             cc = df.loc[df["MIC"] == mic.upper()]["ISO COUNTRY CODE (ISO 3166)"].iloc[0]
-            if country_code.upper() == cc[0:2]:
-                return True
-            else:
-                return False
+            return country_code.upper() == cc[:2]
         else:
             return False
     except Exception as e:
@@ -45,9 +42,9 @@ class ColumnValuesToBeValidMicMatchCountryCode(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_code, **kwargs):
+    def _pandas(self, column, country_code, **kwargs):
         return column.apply(
-            lambda x: is_valid_mic_match_country_code(x, country_code, cls.df)
+            lambda x: is_valid_mic_match_country_code(x, country_code, self.df)
         )
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

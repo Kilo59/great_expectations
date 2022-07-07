@@ -20,14 +20,7 @@ from great_expectations.expectations.metrics import (
 def is_validarizonazip(zip: str):
     list_of_dicts_ofarizonazips = zipcodes.filter_by(state="AZ")
     list_ofarizonazips = [d["zip_code"] for d in list_of_dicts_ofarizonazips]
-    if len(zip) > 10:
-        return False
-    elif type(zip) != str:
-        return False
-    elif zip in list_ofarizonazips:
-        return True
-    else:
-        return False
+    return len(zip) <= 10 and type(zip) == str and zip in list_ofarizonazips
 
 
 # This class defines a Metric to support your Expectation.
@@ -39,7 +32,7 @@ class ColumnValuesToBeValidArizonaZip(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_validarizonazip(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

@@ -30,14 +30,7 @@ class TableModelingRidgeFeatureImportances(TableMetricProvider):
     value_keys = ("y_column",)
 
     @metric_value(engine=PandasExecutionEngine)
-    def _pandas(
-        cls,
-        execution_engine: PandasExecutionEngine,
-        metric_domain_kwargs: Dict,
-        metric_value_kwargs: Dict,
-        metrics: Dict[Tuple, Any],
-        runtime_configuration: Dict,
-    ):
+    def _pandas(self, execution_engine: PandasExecutionEngine, metric_domain_kwargs: Dict, metric_value_kwargs: Dict, metrics: Dict[Tuple, Any], runtime_configuration: Dict):
         df, _, _ = execution_engine.get_compute_domain(
             metric_domain_kwargs, domain_type=MetricDomainTypes.TABLE
         )
@@ -56,7 +49,7 @@ class TableModelingRidgeFeatureImportances(TableMetricProvider):
             scoring="neg_mean_absolute_percentage_error",
         )
 
-        return {i: j for i, j in zip(X.columns, importances.importances_mean)}
+        return dict(zip(X.columns, importances.importances_mean))
 
     @classmethod
     def _get_evaluation_dependencies(
@@ -170,11 +163,10 @@ class ExpectTableLinearFeatureImportancesToBe(TableExpectation):
                 isinstance(n_features, int) or n_features is None
             ), "n_features must be an integer"
             if columns is not None:
-                assert (
-                    isinstance(columns, tuple) or isinstance(columns, list)
-                ) and all(
+                assert isinstance(columns, (tuple, list)) and all(
                     isinstance(i, str) for i in columns
                 ), "columns must be a tuple or list of string column names"
+
             assert (
                 isinstance(threshold, float) and (0 <= threshold <= 1)
             ) or threshold is None, "threshold must be a float between 0 and 1"
@@ -215,10 +207,10 @@ class ExpectTableLinearFeatureImportancesToBe(TableExpectation):
             column_success = True
 
         if n_features:
-            n_features_success = []
-            for i in importances.keys():
-                if importances[i] >= threshold:
-                    n_features_success.append(True)
+            n_features_success = [
+                True for i, value in importances.items() if value >= threshold
+            ]
+
             n_features_success = len(n_features_success) == int(n_features)
         else:
             n_features_success = True

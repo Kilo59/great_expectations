@@ -182,11 +182,10 @@ class UsageStatsEvents(enum.Enum):
             List of strings from enum value for event
         """
         other_items_list: List[List[str]] = [["begin"], ["end"]]
-        event_names: List[str] = [
+        return [
             cls.get_cli_event_name(noun, verb, other_items=other_items)
             for other_items in other_items_list
         ]
-        return event_names
 
 
 if __name__ == "__main__":

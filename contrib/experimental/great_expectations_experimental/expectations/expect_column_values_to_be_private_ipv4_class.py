@@ -20,15 +20,18 @@ from great_expectations.expectations.metrics import (
 def is_private_ip_address_in_class(addr: str, ip_class) -> bool:
     try:
         for ic in ip_class:
-            if ic == "A":
-                if ipaddress.ip_address(addr) in ipaddress.ip_network("10.0.0.0/8"):
-                    return True
-            if ic == "B":
-                if ipaddress.ip_address(addr) in ipaddress.ip_network("172.16.0.0/12"):
-                    return True
-            if ic == "C":
-                if ipaddress.ip_address(addr) in ipaddress.ip_network("192.168.0.0/16"):
-                    return True
+            if ic == "A" and ipaddress.ip_address(
+                addr
+            ) in ipaddress.ip_network("10.0.0.0/8"):
+                return True
+            if ic == "B" and ipaddress.ip_address(
+                addr
+            ) in ipaddress.ip_network("172.16.0.0/12"):
+                return True
+            if ic == "C" and ipaddress.ip_address(
+                addr
+            ) in ipaddress.ip_network("192.168.0.0/16"):
+                return True
         return False
     except Exception as e:
         return False
@@ -43,7 +46,7 @@ class ColumnValuesToBePrivateIpv4Class(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, ip_class, **kwargs):
+    def _pandas(self, column, ip_class, **kwargs):
         return column.apply(lambda x: is_private_ip_address_in_class(x, ip_class))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

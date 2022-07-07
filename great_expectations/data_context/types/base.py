@@ -84,14 +84,13 @@ class BaseYamlConfig(SerializableDictDot):
         if hasattr(cls.get_config_class(), "_schema_instance"):
             # noinspection PyProtectedMember
             schema_instance: Optional[Schema] = cls.get_config_class()._schema_instance
-            if schema_instance is None:
-                cls.get_config_class()._schema_instance = (cls.get_schema_class())()
-                return cls.get_config_class().schema_instance
-            else:
+            if schema_instance is not None:
                 return schema_instance
+            cls.get_config_class()._schema_instance = (cls.get_schema_class())()
         else:
             cls.get_config_class().schema_instance = (cls.get_schema_class())()
-            return cls.get_config_class().schema_instance
+
+        return cls.get_config_class().schema_instance
 
     @classmethod
     def from_commented_map(cls, commented_map: CommentedMap):  # type: ignore[no-untyped-def]
@@ -211,8 +210,7 @@ class AssetConfig(SerializableDictDot):
         make this refactoring infeasible at the present time.
         """
         dict_obj: dict = self.to_dict()
-        serializeable_dict: dict = convert_to_json_serializable(data=dict_obj)
-        return serializeable_dict
+        return convert_to_json_serializable(data=dict_obj)
 
 
 class AssetConfigSchema(Schema):
@@ -458,8 +456,7 @@ class DataConnectorConfig(SerializableDictDot):
         make this refactoring infeasible at the present time.
         """
         dict_obj: dict = self.to_dict()
-        serializeable_dict: dict = convert_to_json_serializable(data=dict_obj)
-        return serializeable_dict
+        return convert_to_json_serializable(data=dict_obj)
 
 
 class DataConnectorConfigSchema(Schema):
@@ -545,79 +542,66 @@ class DataConnectorConfigSchema(Schema):
         # If a class_name begins with the dollar sign ("$"), then it is assumed to be a variable name to be substituted.
         if data["class_name"][0] == "$":
             return
-        if ("default_regex" in data) and not (
-            data["class_name"]
-            in [
-                "InferredAssetFilesystemDataConnector",
-                "ConfiguredAssetFilesystemDataConnector",
-                "InferredAssetS3DataConnector",
-                "ConfiguredAssetS3DataConnector",
-                "InferredAssetAzureDataConnector",
-                "ConfiguredAssetAzureDataConnector",
-                "InferredAssetGCSDataConnector",
-                "ConfiguredAssetGCSDataConnector",
-                "InferredAssetDBFSDataConnector",
-                "ConfiguredAssetDBFSDataConnector",
-            ]
-        ):
+        if "default_regex" in data and data["class_name"] not in [
+            "InferredAssetFilesystemDataConnector",
+            "ConfiguredAssetFilesystemDataConnector",
+            "InferredAssetS3DataConnector",
+            "ConfiguredAssetS3DataConnector",
+            "InferredAssetAzureDataConnector",
+            "ConfiguredAssetAzureDataConnector",
+            "InferredAssetGCSDataConnector",
+            "ConfiguredAssetGCSDataConnector",
+            "InferredAssetDBFSDataConnector",
+            "ConfiguredAssetDBFSDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by a
 subclass of the FilePathDataConnector class (your data connector is "{data['class_name']}").  Please update your
 configuration to continue.
                 """
             )
-        if ("glob_directive" in data) and not (
-            data["class_name"]
-            in [
-                "InferredAssetFilesystemDataConnector",
-                "ConfiguredAssetFilesystemDataConnector",
-                "InferredAssetDBFSDataConnector",
-                "ConfiguredAssetDBFSDataConnector",
-            ]
-        ):
+        if "glob_directive" in data and data["class_name"] not in [
+            "InferredAssetFilesystemDataConnector",
+            "ConfiguredAssetFilesystemDataConnector",
+            "InferredAssetDBFSDataConnector",
+            "ConfiguredAssetDBFSDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by a
 filesystem type of the data connector (your data connector is "{data['class_name']}").  Please update your
 configuration to continue.
                 """
             )
-        if ("delimiter" in data) and not (
-            data["class_name"]
-            in [
-                "InferredAssetS3DataConnector",
-                "ConfiguredAssetS3DataConnector",
-                "InferredAssetAzureDataConnector",
-                "ConfiguredAssetAzureDataConnector",
-            ]
-        ):
+        if "delimiter" in data and data["class_name"] not in [
+            "InferredAssetS3DataConnector",
+            "ConfiguredAssetS3DataConnector",
+            "InferredAssetAzureDataConnector",
+            "ConfiguredAssetAzureDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by an
 S3/Azure type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration \
 to continue.
 """
             )
-        if ("prefix" in data) and not (
-            data["class_name"]
-            in [
-                "InferredAssetS3DataConnector",
-                "ConfiguredAssetS3DataConnector",
-                "InferredAssetGCSDataConnector",
-                "ConfiguredAssetGCSDataConnector",
-            ]
-        ):
+        if "prefix" in data and data["class_name"] not in [
+            "InferredAssetS3DataConnector",
+            "ConfiguredAssetS3DataConnector",
+            "InferredAssetGCSDataConnector",
+            "ConfiguredAssetGCSDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by an
 S3/GCS type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration to
 continue.
                 """
             )
-        if ("bucket" in data or "max_keys" in data) and not (
-            data["class_name"]
-            in [
-                "InferredAssetS3DataConnector",
-                "ConfiguredAssetS3DataConnector",
-            ]
-        ):
+        if (("bucket" in data or "max_keys" in data)) and data[
+            "class_name"
+        ] not in [
+            "InferredAssetS3DataConnector",
+            "ConfiguredAssetS3DataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by an
 S3 type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration to
@@ -625,24 +609,22 @@ continue.
                 """
             )
         if (
-            "azure_options" in data or "container" in data or "name_starts_with" in data
-        ) and not (
-            data["class_name"]
-            in [
-                "InferredAssetAzureDataConnector",
-                "ConfiguredAssetAzureDataConnector",
-            ]
-        ):
+            (
+                "azure_options" in data
+                or "container" in data
+                or "name_starts_with" in data
+            )
+        ) and data["class_name"] not in [
+            "InferredAssetAzureDataConnector",
+            "ConfiguredAssetAzureDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by an
 Azure type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration to
 continue.
                     """
             )
-        if "azure_options" in data and data["class_name"] in [
-            "InferredAssetAzureDataConnector",
-            "ConfiguredAssetAzureDataConnector",
-        ]:
+        if "azure_options" in data:
             azure_options = data["azure_options"]
             if not (("conn_str" in azure_options) ^ ("account_url" in azure_options)):
                 raise ge_exceptions.InvalidConfigError(
@@ -652,24 +634,22 @@ configuration to continue.
 """
                 )
         if (
-            "gcs_options" in data or "bucket_or_name" in data or "max_results" in data
-        ) and not (
-            data["class_name"]
-            in [
-                "InferredAssetGCSDataConnector",
-                "ConfiguredAssetGCSDataConnector",
-            ]
-        ):
+            (
+                "gcs_options" in data
+                or "bucket_or_name" in data
+                or "max_results" in data
+            )
+        ) and data["class_name"] not in [
+            "InferredAssetGCSDataConnector",
+            "ConfiguredAssetGCSDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by a
 GCS type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration to
 continue.
                     """
             )
-        if "gcs_options" in data and data["class_name"] in [
-            "InferredAssetGCSDataConnector",
-            "ConfiguredAssetGCSDataConnector",
-        ]:
+        if "gcs_options" in data:
             gcs_options = data["gcs_options"]
             if "filename" in gcs_options and "info" in gcs_options:
                 raise ge_exceptions.InvalidConfigError(
@@ -679,23 +659,22 @@ data connector. You must only select one between `filename` (from_service_accoun
 """
                 )
         if (
-            "data_asset_name_prefix" in data
-            or "data_asset_name_suffix" in data
-            or "include_schema_name" in data
-            or "splitter_method" in data
-            or "splitter_kwargs" in data
-            or "sampling_method" in data
-            or "sampling_kwargs" in data
-            or "excluded_tables" in data
-            or "included_tables" in data
-            or "skip_inapplicable_tables" in data
-        ) and not (
-            data["class_name"]
-            in [
-                "InferredAssetSqlDataConnector",
-                "ConfiguredAssetSqlDataConnector",
-            ]
-        ):
+            (
+                "data_asset_name_prefix" in data
+                or "data_asset_name_suffix" in data
+                or "include_schema_name" in data
+                or "splitter_method" in data
+                or "splitter_kwargs" in data
+                or "sampling_method" in data
+                or "sampling_kwargs" in data
+                or "excluded_tables" in data
+                or "included_tables" in data
+                or "skip_inapplicable_tables" in data
+            )
+        ) and data["class_name"] not in [
+            "InferredAssetSqlDataConnector",
+            "ConfiguredAssetSqlDataConnector",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data connector that are required only by an
 SQL type of the data connector (your data connector is "{data['class_name']}").  Please update your configuration to
@@ -799,17 +778,18 @@ class ExecutionEngineConfigSchema(Schema):
         # If a class_name begins with the dollar sign ("$"), then it is assumed to be a variable name to be substituted.
         if data["class_name"][0] == "$":
             return
-        if ("connection_string" in data or "credentials" in data) and not (
-            data["class_name"] == "SqlAlchemyExecutionEngine"
-        ):
+        if (("connection_string" in data or "credentials" in data)) and data[
+            "class_name"
+        ] != "SqlAlchemyExecutionEngine":
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses the "connection_string" key in an execution engine, but only
 SqlAlchemyExecutionEngine requires this attribute (your execution engine is "{data['class_name']}").  Please update your
 configuration to continue.
                 """
             )
-        if "spark_config" in data and not (
-            data["class_name"] == "SparkDFExecutionEngine"
+        if (
+            "spark_config" in data
+            and data["class_name"] != "SparkDFExecutionEngine"
         ):
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses the "spark_config" key in an execution engine, but only
@@ -917,8 +897,7 @@ class DatasourceConfig(SerializableDictDot):
         make this refactoring infeasible at the present time.
         """
         dict_obj: dict = self.to_dict()
-        serializeable_dict: dict = convert_to_json_serializable(data=dict_obj)
-        return serializeable_dict
+        return convert_to_json_serializable(data=dict_obj)
 
 
 class DatasourceConfigSchema(Schema):
@@ -990,17 +969,16 @@ class DatasourceConfigSchema(Schema):
         if data["class_name"][0] == "$":
             return
         if (
-            "connection_string" in data
-            or "credentials" in data
-            or "introspection" in data
-            or "tables" in data
-        ) and not (
-            data["class_name"]
-            in [
-                "SqlAlchemyDatasource",
-                "SimpleSqlalchemyDatasource",
-            ]
-        ):
+            (
+                "connection_string" in data
+                or "credentials" in data
+                or "introspection" in data
+                or "tables" in data
+            )
+        ) and data["class_name"] not in [
+            "SqlAlchemyDatasource",
+            "SimpleSqlalchemyDatasource",
+        ]:
             raise ge_exceptions.InvalidConfigError(
                 f"""Your current configuration uses one or more keys in a data source that are required only by a
 sqlalchemy data source (your data source is "{data['class_name']}").  Please update your configuration to continue.
@@ -1106,10 +1084,7 @@ class AnonymizedUsageStatisticsConfigSchema(Schema):
 class NotebookTemplateConfig(DictDot):
     def __init__(self, file_name, template_kwargs=None) -> None:
         self.file_name = file_name
-        if template_kwargs:
-            self.template_kwargs = template_kwargs
-        else:
-            self.template_kwargs = {}
+        self.template_kwargs = template_kwargs or {}
 
 
 class NotebookTemplateConfigSchema(Schema):
@@ -1398,7 +1373,7 @@ class DataContextConfigSchema(Schema):
             exc
             and exc.messages
             and isinstance(exc.messages, dict)
-            and all([key is None for key in exc.messages.keys()])
+            and all(key is None for key in exc.messages.keys())
         ):
             exc.messages = list(itertools.chain.from_iterable(exc.messages.values()))
 
@@ -1427,10 +1402,8 @@ class DataContextConfigSchema(Schema):
 
         # When migrating from 0.7.x to 0.8.0
         if data["config_version"] == 0 and any(
-            [
-                store_config["class_name"] == "ValidationsStore"
-                for store_config in data["stores"].values()
-            ]
+            store_config["class_name"] == "ValidationsStore"
+            for store_config in data["stores"].values()
         ):
             raise ge_exceptions.UnsupportedConfigVersionError(
                 "You appear to be using a config version from the 0.7.x series. This version is no longer supported."
@@ -1438,39 +1411,33 @@ class DataContextConfigSchema(Schema):
 
         if data["config_version"] < MINIMUM_SUPPORTED_CONFIG_VERSION:
             raise ge_exceptions.UnsupportedConfigVersionError(
-                "You appear to have an invalid config version ({}).\n    The version number must be at least {}. "
-                "Please see the migration guide at https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api".format(
-                    data["config_version"], MINIMUM_SUPPORTED_CONFIG_VERSION
-                ),
+                f'You appear to have an invalid config version ({data["config_version"]}).\n    The version number must be at least {MINIMUM_SUPPORTED_CONFIG_VERSION}. Please see the migration guide at https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api'
             )
+
 
         if data["config_version"] > CURRENT_GE_CONFIG_VERSION:
             raise ge_exceptions.InvalidDataContextConfigError(
-                "You appear to have an invalid config version ({}).\n    The maximum valid version is {}.".format(
-                    data["config_version"], CURRENT_GE_CONFIG_VERSION
+                f'You appear to have an invalid config version ({data["config_version"]}).\n    The maximum valid version is {CURRENT_GE_CONFIG_VERSION}.',
+                validation_error=ValidationError(
+                    message="config version too high"
                 ),
-                validation_error=ValidationError(message="config version too high"),
             )
+
 
         if data["config_version"] < CURRENT_GE_CONFIG_VERSION and (
             "checkpoint_store_name" in data
             or any(
-                [
-                    store_config["class_name"] == "CheckpointStore"
-                    for store_config in data["stores"].values()
-                ]
+                store_config["class_name"] == "CheckpointStore"
+                for store_config in data["stores"].values()
             )
         ):
             raise ge_exceptions.InvalidDataContextConfigError(
-                "You appear to be using a Checkpoint store with an invalid config version ({}).\n    Your data context with this older configuration version specifies a Checkpoint store, which is a new feature.  Please update your configuration to the new version number {} before adding a Checkpoint store.\n  Visit https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api to learn more about the upgrade process.".format(
-                    data["config_version"], float(CURRENT_GE_CONFIG_VERSION)
-                ),
+                f'You appear to be using a Checkpoint store with an invalid config version ({data["config_version"]}).\n    Your data context with this older configuration version specifies a Checkpoint store, which is a new feature.  Please update your configuration to the new version number {float(CURRENT_GE_CONFIG_VERSION)} before adding a Checkpoint store.\n  Visit https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api to learn more about the upgrade process.',
                 validation_error=ValidationError(
-                    message="You appear to be using a Checkpoint store with an invalid config version ({}).\n    Your data context with this older configuration version specifies a Checkpoint store, which is a new feature.  Please update your configuration to the new version number {} before adding a Checkpoint store.\n  Visit https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api to learn more about the upgrade process.".format(
-                        data["config_version"], float(CURRENT_GE_CONFIG_VERSION)
-                    )
+                    message=f'You appear to be using a Checkpoint store with an invalid config version ({data["config_version"]}).\n    Your data context with this older configuration version specifies a Checkpoint store, which is a new feature.  Please update your configuration to the new version number {float(CURRENT_GE_CONFIG_VERSION)} before adding a Checkpoint store.\n  Visit https://docs.greatexpectations.io/docs/guides/miscellaneous/migration_guide#migrating-to-the-batch-request-v3-api to learn more about the upgrade process.'
                 ),
             )
+
 
         if (
             data["config_version"] >= FIRST_GE_CONFIG_VERSION_WITH_CHECKPOINT_STORE
@@ -2165,8 +2132,7 @@ class DataContextConfig(BaseYamlConfig):
         make this refactoring infeasible at the present time.
         """
         dict_obj: dict = self.to_dict()
-        serializeable_dict: dict = convert_to_json_serializable(data=dict_obj)
-        return serializeable_dict
+        return convert_to_json_serializable(data=dict_obj)
 
     def to_sanitized_json_dict(self) -> dict:
         """
@@ -2314,13 +2280,12 @@ class CheckpointConfigSchema(Schema):
                 """
             )
 
-        if data.get("config_version"):
-            if "name" not in data:
-                raise ge_exceptions.InvalidConfigError(
-                    """Your Checkpoint configuration requires the "name" field.  Please update your current Checkpoint
+        if data.get("config_version") and "name" not in data:
+            raise ge_exceptions.InvalidConfigError(
+                """Your Checkpoint configuration requires the "name" field.  Please update your current Checkpoint
                     configuration to continue.
                     """
-                )
+            )
 
     # noinspection PyUnusedLocal
     @pre_dump
@@ -2606,8 +2571,7 @@ class CheckpointConfig(BaseYamlConfig):
         make this refactoring infeasible at the present time.
         """
         dict_obj: dict = self.to_dict()
-        serializeable_dict: dict = convert_to_json_serializable(data=dict_obj)
-        return serializeable_dict
+        return convert_to_json_serializable(data=dict_obj)
 
     def __repr__(self) -> str:
         """

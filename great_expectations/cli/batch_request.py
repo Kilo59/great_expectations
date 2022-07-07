@@ -14,7 +14,7 @@ import click
 
 try:
     from pybigquery.parse_url import parse_url as parse_bigquery_url
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     parse_bigquery_url = None
 
 from great_expectations import exceptions as ge_exceptions
@@ -101,16 +101,12 @@ def get_batch_request(
             f"Datasource '{datasource.name}' of unsupported type {type(datasource)} was encountered."
         )
 
-    batch_request.update(
-        {
-            "data_asset_name": data_asset_name,
-        }
-    )
+    batch_request["data_asset_name"] = data_asset_name
 
     if additional_batch_request_args and isinstance(
         additional_batch_request_args, dict
     ):
-        batch_request.update(additional_batch_request_args)
+        batch_request |= additional_batch_request_args
 
     batch_spec_passthrough: Dict[str, Union[str, Dict[str, Any]]] = batch_request.get(
         "batch_spec_passthrough"
@@ -118,7 +114,7 @@ def get_batch_request(
     if batch_spec_passthrough is None:
         batch_spec_passthrough = {}
 
-    batch_spec_passthrough.update(_get_batch_spec_passthrough(datasource=datasource))
+    batch_spec_passthrough |= _get_batch_spec_passthrough(datasource=datasource)
     batch_request["batch_spec_passthrough"] = batch_spec_passthrough
 
     filter_properties_dict(properties=batch_request, clean_falsy=True, inplace=True)
@@ -147,11 +143,9 @@ def select_data_connector_name(
         return list(available_data_asset_names_by_data_connector_dict.keys())[0]
 
     elif num_available_data_asset_names_by_data_connector == 2:
-        # if only default data_connectors are configured, select default_inferred_asset_data_connector
-        default_data_connector = _check_default_data_connectors(
+        if default_data_connector := _check_default_data_connectors(
             available_data_asset_names_by_data_connector_dict
-        )
-        if default_data_connector:
+        ):
             return default_data_connector
 
     data_connector_names: List[str] = list(
@@ -250,7 +244,7 @@ def _list_available_data_asset_names(
         for i in range(0, len(available_data_asset_names_str), PAGE_SIZE)
     ]
 
-    if len(data_asset_pages) == 0:
+    if not data_asset_pages:
         return None
 
     display_idx = 0  # Used to traverse between pages
@@ -357,7 +351,7 @@ You have selected a datasource that is a SQL database. How would you like to spe
             type=click.Choice(["1", "2", "3"]),
             show_choices=False,
         )
-        if single_or_multiple_data_asset_selection == "1":  # name the table and schema
+        if single_or_multiple_data_asset_selection == "1":
             schema_name = click.prompt(
                 "Please provide the schema name of the table (this is optional)",
                 default=default_schema,
@@ -365,11 +359,8 @@ You have selected a datasource that is a SQL database. How would you like to spe
             table_name = click.prompt(
                 "Please provide the table name (this is required)"
             )
-            if schema_name:
-                data_asset_name = f"{schema_name}.{table_name}"
-            else:
-                data_asset_name = table_name
-        elif single_or_multiple_data_asset_selection == "2":  # list it all
+            data_asset_name = f"{schema_name}.{table_name}" if schema_name else table_name
+        elif single_or_multiple_data_asset_selection == "2":
             msg_prompt_warning: str = r"""Warning: If you have a large number of tables in your datasource, this may take a very long time.
 Would you like to continue?"""
             confirmation: str = click.prompt(
@@ -385,11 +376,9 @@ Would you like to continue?"""
     if (
         datasource.execution_engine.engine.dialect.name.lower() == "bigquery"
         and parse_bigquery_url is not None
-    ):
-        # bigquery table needs to contain the project id if it differs from the credentials project
-        if len(data_asset_name.split(".")) < 3:
-            project_id, _, _, _, _, _ = parse_bigquery_url(datasource.engine.url)
-            data_asset_name = f"{project_id}.{data_asset_name}"
+    ) and len(data_asset_name.split(".")) < 3:
+        project_id, _, _, _, _, _ = parse_bigquery_url(datasource.engine.url)
+        data_asset_name = f"{project_id}.{data_asset_name}"
 
     return data_asset_name
 

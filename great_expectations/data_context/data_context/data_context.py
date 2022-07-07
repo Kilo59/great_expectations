@@ -140,11 +140,10 @@ class DataContext(BaseDataContext):
     def all_uncommitted_directories_exist(cls, ge_dir: str) -> bool:
         """Check if all uncommitted directories exist."""
         uncommitted_dir = os.path.join(ge_dir, cls.GE_UNCOMMITTED_DIR)
-        for directory in cls.UNCOMMITTED_DIRECTORIES:
-            if not os.path.isdir(os.path.join(uncommitted_dir, directory)):
-                return False
-
-        return True
+        return all(
+            os.path.isdir(os.path.join(uncommitted_dir, directory))
+            for directory in cls.UNCOMMITTED_DIRECTORIES
+        )
 
     @classmethod
     def config_variables_yml_exist(cls, ge_dir: str) -> bool:
@@ -297,11 +296,9 @@ class DataContext(BaseDataContext):
             ge_cloud_organization_id=ge_cloud_organization_id,
         )
 
-        missing_keys = []
-        for key, val in ge_cloud_config_dict.items():
-            if not val:
-                missing_keys.append(key)
-        if len(missing_keys) > 0:
+        if missing_keys := [
+            key for key, val in ge_cloud_config_dict.items() if not val
+        ]:
             missing_keys_str = [f'"{key}"' for key in missing_keys]
             global_config_path_str = [
                 f'"{path}"' for path in super().GLOBAL_CONFIG_PATHS
@@ -411,8 +408,7 @@ class DataContext(BaseDataContext):
         :return: the configuration object read from the file or template
         """
         if self.ge_cloud_mode:
-            config = self._retrieve_data_context_config_from_ge_cloud()
-            return config
+            return self._retrieve_data_context_config_from_ge_cloud()
 
         path_to_yml = os.path.join(self._context_root_directory, self.GE_YML)
         try:
@@ -421,14 +417,9 @@ class DataContext(BaseDataContext):
 
         except YAMLError as err:
             raise ge_exceptions.InvalidConfigurationYamlError(
-                "Your configuration file is not a valid yml file likely due to a yml syntax error:\n\n{}".format(
-                    err
-                )
+                f"Your configuration file is not a valid yml file likely due to a yml syntax error:\n\n{err}"
             )
-        except DuplicateKeyError:
-            raise ge_exceptions.InvalidConfigurationYamlError(
-                "Error: duplicate key found in project YAML file."
-            )
+
         except OSError:
             raise ge_exceptions.ConfigNotFoundError()
 
@@ -465,11 +456,7 @@ class DataContext(BaseDataContext):
     ) -> Optional[Union[LegacyDatasource, BaseDatasource]]:
         logger.debug(f"Starting DataContext.add_datasource for datasource {name}")
 
-        new_datasource: Optional[
-            Union[LegacyDatasource, BaseDatasource]
-        ] = super().add_datasource(name=name, save_changes=True, **kwargs)
-
-        return new_datasource
+        return super().add_datasource(name=name, save_changes=True, **kwargs)
 
     def update_datasource(
         self,
@@ -497,8 +484,7 @@ class DataContext(BaseDataContext):
     def find_context_root_dir(cls):
         result = None
         yml_path = None
-        ge_home_environment = os.getenv("GE_HOME")
-        if ge_home_environment:
+        if ge_home_environment := os.getenv("GE_HOME"):
             ge_home_environment = os.path.expanduser(ge_home_environment)
             if os.path.isdir(ge_home_environment) and os.path.isfile(
                 os.path.join(ge_home_environment, "great_expectations.yml")
@@ -539,16 +525,14 @@ class DataContext(BaseDataContext):
         if validate_config_version:
             if config_version < MINIMUM_SUPPORTED_CONFIG_VERSION:
                 raise ge_exceptions.UnsupportedConfigVersionError(
-                    "Invalid config version ({}).\n    The version number must be at least {}. ".format(
-                        config_version, MINIMUM_SUPPORTED_CONFIG_VERSION
-                    ),
+                    f"Invalid config version ({config_version}).\n    The version number must be at least {MINIMUM_SUPPORTED_CONFIG_VERSION}. "
                 )
+
             elif config_version > CURRENT_GE_CONFIG_VERSION:
                 raise ge_exceptions.UnsupportedConfigVersionError(
-                    "Invalid config version ({}).\n    The maximum valid version is {}.".format(
-                        config_version, CURRENT_GE_CONFIG_VERSION
-                    ),
+                    f"Invalid config version ({config_version}).\n    The maximum valid version is {CURRENT_GE_CONFIG_VERSION}."
                 )
+
 
         yml_path = cls.find_context_yml_file(search_start_dir=context_root_dir)
         if yml_path is None:
@@ -615,9 +599,11 @@ class DataContext(BaseDataContext):
 
     @classmethod
     def does_project_have_a_datasource_in_config_file(cls, ge_dir):
-        if not cls.does_config_exist_on_disk(ge_dir):
-            return False
-        return cls._does_context_have_at_least_one_datasource(ge_dir)
+        return (
+            cls._does_context_have_at_least_one_datasource(ge_dir)
+            if cls.does_config_exist_on_disk(ge_dir)
+            else False
+        )
 
     @classmethod
     def _does_context_have_at_least_one_datasource(cls, ge_dir):
@@ -636,8 +622,7 @@ class DataContext(BaseDataContext):
     @classmethod
     def _attempt_context_instantiation(cls, ge_dir):
         try:
-            context = DataContext(ge_dir)
-            return context
+            return DataContext(ge_dir)
         except (
             ge_exceptions.DataContextError,
             ge_exceptions.InvalidDataContextConfigError,

@@ -30,7 +30,7 @@ class ColumnValuesMatchSomeCriteria(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         raise NotImplementedError
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

@@ -20,10 +20,7 @@ from great_expectations.expectations.metrics import (
 
 def is_valid_date(date_in: str) -> bool:
     try:
-        if isinstance(date_in, str):
-            d = parse(date_in)
-        else:
-            d = date_in
+        d = parse(date_in) if isinstance(date_in, str) else date_in
         return True
     except Exception as e:
         return False
@@ -38,7 +35,7 @@ class ColumnValuesToBeValidDate(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_date(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

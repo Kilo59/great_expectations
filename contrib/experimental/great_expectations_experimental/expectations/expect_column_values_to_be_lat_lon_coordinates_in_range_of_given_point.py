@@ -43,7 +43,7 @@ class ColumnValuesAreLatLonCoordinatesInRange(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         center_point = kwargs.get("center_point")
         unit = kwargs.get("unit")
         range = kwargs.get("range")
@@ -73,7 +73,7 @@ class ColumnValuesAreLatLonCoordinatesInRange(ColumnMapMetricProvider):
 
     # This method defines the business logic for evaluating your metric when using a SparkDFExecutionEngine
     @column_condition_partial(engine=SparkDFExecutionEngine)
-    def _spark(cls, column, **kwargs):
+    def _spark(self, column, **kwargs):
         center_point = kwargs.get("center_point")
         unit = kwargs.get("unit")
         range = kwargs.get("range")
@@ -140,9 +140,7 @@ def fcc_projection(loc1, loc2):
         + (0.00012 * cos(5 * mean_lat))
     )
 
-    distance = sqrt((k1 * delta_lat) ** 2 + (k2 * delta_lon) ** 2)
-
-    return distance
+    return sqrt((k1 * delta_lat) ** 2 + (k2 * delta_lon) ** 2)
 
 
 def pythagorean_projection(loc1, loc2):
@@ -164,9 +162,7 @@ def pythagorean_projection(loc1, loc2):
 
     radius = 6371.009
 
-    distance = radius * sqrt((delta_lat**2) + (cos(mean_lat) * delta_lon) ** 2)
-
-    return distance
+    return radius * sqrt((delta_lat**2) + (cos(mean_lat) * delta_lon) ** 2)
 
 
 # This class defines the Expectation itself
@@ -256,11 +252,10 @@ class ExpectColumnValuesToBeLatLonCoordinatesInRangeOfGivenPoint(ColumnMapExpect
             assert (
                 center_point is not None and range is not None
             ), "center_point and range must be specified"
-            assert (
-                isinstance(center_point, tuple) or isinstance(center_point, list)
-            ) and all(
+            assert isinstance(center_point, (tuple, list)) and all(
                 isinstance(n, float) for n in center_point
             ), "center_point must be a tuple or list of lat/lon floats"
+
             assert (center_point[0] >= -90 and center_point[0] <= 90) and (
                 center_point[1] >= -180 and center_point[1] <= 180
             ), "center_point must be a valid lat/lon pair"
@@ -487,14 +482,10 @@ class ExpectColumnValuesToBeLatLonCoordinatesInRangeOfGivenPoint(ColumnMapExpect
         if params["mostly"] is None:
             template_str = "values must be in $projection projection within $range $unit of $center_point"
         else:
-            if params["mostly"] is not None:
-                params["mostly_pct"] = num_to_str(
-                    params["mostly"] * 100, precision=15, no_scientific=True
-                )
-                template_str += ", at least $mostly_pct % of the time."
-            else:
-                template_str += "."
-
+            params["mostly_pct"] = num_to_str(
+                params["mostly"] * 100, precision=15, no_scientific=True
+            )
+            template_str += ", at least $mostly_pct % of the time."
         if include_column_name:
             template_str = f"$column {template_str}"
 

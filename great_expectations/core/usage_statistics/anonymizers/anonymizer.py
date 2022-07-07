@@ -86,11 +86,14 @@ class Anonymizer(BaseAnonymizer):
         return self._get_anonymizer(obj=obj, **kwargs) is not None
 
     def _get_anonymizer(self, obj: object, **kwargs) -> Optional[BaseAnonymizer]:
-        for anonymizer in self._anonymizers.values():
-            if anonymizer.can_handle(obj=obj, **kwargs):
-                return anonymizer
-
-        return None
+        return next(
+            (
+                anonymizer
+                for anonymizer in self._anonymizers.values()
+                if anonymizer.can_handle(obj=obj, **kwargs)
+            ),
+            None,
+        )
 
     def anonymize_init_payload(self, init_payload: dict) -> dict:
         anonymized_init_payload = {}

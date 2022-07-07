@@ -27,14 +27,14 @@ class ColumnValuesPointWithinGeoRegion(ColumnMapMetricProvider):
     # This method defines the business logic for evaluating your metric when using a PandasExecutionEngine
 
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, country_iso_a3, polygon_points, **kwargs):
+    def _pandas(self, column, country_iso_a3, polygon_points, **kwargs):
 
         # Check if the parameter are None
         if polygon_points is not None:
             polygon = Polygon(polygon_points)
 
         elif country_iso_a3 is not None:
-            country_shapes = cls.world[["geometry", "iso_a3"]]
+            country_shapes = self.world[["geometry", "iso_a3"]]
             country_shapes = country_shapes[country_shapes["iso_a3"] == country_iso_a3]
             country_shapes.reset_index(drop=True, inplace=True)
 
@@ -276,9 +276,8 @@ class ExpectColumnValuesPointWithinGeoRegion(ColumnMapExpectation):
         template_str = "values must be inside "
         if params["country_iso_a3"] is not None:
             template_str = "$country_iso_a3 country"
-        else:
-            if params["polygon_points"] is not None:
-                template_str = "polygon defined by $polygon_points"
+        elif params["polygon_points"] is not None:
+            template_str = "polygon defined by $polygon_points"
         if params["mostly"] is not None:
             params["mostly_pct"] = num_to_str(
                 params["mostly"] * 100, precision=15, no_scientific=True
@@ -289,7 +288,7 @@ class ExpectColumnValuesPointWithinGeoRegion(ColumnMapExpectation):
             template_str += "."
 
         if include_column_name:
-            template_str = "$column " + template_str
+            template_str = f"$column {template_str}"
 
         return [
             RenderedStringTemplateContent(

@@ -39,11 +39,10 @@ class CLIState:
         directory: str = toolkit.parse_cli_config_file_location(
             config_file_location=self.config_file_location
         ).get("directory")
-        context: DataContext = toolkit.load_data_context_with_error_handling(
+        return toolkit.load_data_context_with_error_handling(
             directory=directory,
             from_cli_upgrade_command=False,
         )
-        return context
 
     @property
     def data_context(self) -> Optional[DataContext]:
@@ -60,9 +59,7 @@ class CLIState:
 
 class CLI(click.MultiCommand):
     def list_commands(self, ctx: click.Context) -> List[str]:
-        # note that if --help is called this method is invoked before any flags
-        # are parsed or context set.
-        commands = [
+        return [
             "checkpoint",
             "datasource",
             "docs",
@@ -71,8 +68,6 @@ class CLI(click.MultiCommand):
             "store",
             "suite",
         ]
-
-        return commands
 
     def get_command(self, ctx: click.Context, name: str) -> Optional[str]:
         module_name = name.replace("-", "_")

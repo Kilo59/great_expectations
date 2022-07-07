@@ -28,9 +28,9 @@ class ColumnValuesCoordinatesDegreeDecimal(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         bounds = Polygon.from_bounds(xmin=-180.0, ymin=-90.0, xmax=180.0, ymax=90.0)
-        return column.apply(lambda x, y=bounds: cls._point_in_bounds(x, y))
+        return column.apply(lambda x, y=bounds: self._point_in_bounds(x, y))
 
     @staticmethod
     def _point_in_bounds(point, bounds):
@@ -156,7 +156,7 @@ class ExpectColumnValuesToBeValidDegreeDecimalCoordinates(ColumnMapExpectation):
             template_str += "."
 
         if include_column_name:
-            template_str = "$column " + template_str
+            template_str = f"$column {template_str}"
 
         return [
             RenderedStringTemplateContent(

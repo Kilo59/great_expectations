@@ -22,14 +22,7 @@ def is_valid_north_dakota_zip(zip: str):
     list_of_north_dakota_zips = [
         d["zip_code"] for d in list_of_dicts_of_north_dakota_zips
     ]
-    if len(zip) > 10:
-        return False
-    elif type(zip) != str:
-        return False
-    elif zip in list_of_north_dakota_zips:
-        return True
-    else:
-        return False
+    return len(zip) <= 10 and type(zip) == str and zip in list_of_north_dakota_zips
 
 
 # This class defines a Metric to support your Expectation.
@@ -41,7 +34,7 @@ class ColumnValuesToBeValidNorthDakotaZip(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_north_dakota_zip(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

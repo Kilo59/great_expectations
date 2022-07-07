@@ -38,12 +38,12 @@ class RunIdentifier(DataContextKey):
                 run_time = None
 
         run_time = run_time or datetime.datetime.now(datetime.timezone.utc)
-        if not run_time.tzinfo:
-            # this takes the given time and just adds timezone (no conversion)
-            run_time = run_time.replace(tzinfo=datetime.timezone.utc)
-        else:
-            # this takes given time and converts to utc
-            run_time = run_time.astimezone(tz=datetime.timezone.utc)
+        run_time = (
+            run_time.astimezone(tz=datetime.timezone.utc)
+            if run_time.tzinfo
+            else run_time.replace(tzinfo=datetime.timezone.utc)
+        )
+
         self._run_time = run_time
 
     @property
@@ -73,8 +73,7 @@ class RunIdentifier(DataContextKey):
         return json.dumps(self.to_json_dict(), indent=2)
 
     def to_json_dict(self):
-        myself = runIdentifierSchema.dump(self)
-        return myself
+        return runIdentifierSchema.dump(self)
 
     @classmethod
     def from_tuple(cls, tuple_):

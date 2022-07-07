@@ -56,10 +56,11 @@ class DatasourceStore(Store):
             DataContextVariableSchema.DATASOURCES,
         )
 
-        keys_without_store_backend_id: List[str] = [
-            key for key in self._store_backend.list_keys(prefix=datasource_key)
-        ]
-        return [key for key in keys_without_store_backend_id]
+        keys_without_store_backend_id: List[str] = list(
+            self._store_backend.list_keys(prefix=datasource_key)
+        )
+
+        return list(keys_without_store_backend_id)
 
     def remove_key(self, key: DataContextVariableKey) -> None:
         """
@@ -116,8 +117,7 @@ class DatasourceStore(Store):
                 f"Unable to load datasource `{datasource_name}` -- no configuration found or invalid configuration."
             )
 
-        datasource_config: DatasourceConfig = copy.deepcopy(self.get(datasource_key))
-        return datasource_config
+        return copy.deepcopy(self.get(datasource_key))
 
     def delete_by_name(self, datasource_name: str) -> None:
         """Deletes a DatasourceConfig persisted in the store by it's given name.
@@ -169,8 +169,7 @@ class DatasourceStore(Store):
         )
 
     def _determine_datasource_key(self, datasource_name: str) -> DataContextVariableKey:
-        datasource_key: DataContextVariableKey = DataContextVariableKey(
+        return DataContextVariableKey(
             resource_type=DataContextVariableSchema.DATASOURCES,
             resource_name=datasource_name,
         )
-        return datasource_key

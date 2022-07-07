@@ -22,10 +22,7 @@ def is_available(url: str) -> bool:
         res_code = urllib.request.urlopen(url).getcode()
     except Exception as e:
         return False
-    if res_code == 200:
-        return True
-    else:
-        return False
+    return res_code == 200
 
 
 # This class defines a Metric to support your Expectation.
@@ -37,7 +34,7 @@ class ColumnValuesUrlIsAvailable(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_available(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

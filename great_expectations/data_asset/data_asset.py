@@ -185,7 +185,7 @@ class DataAsset:
 
                 # Combine all arguments into a single new "all_args" dictionary to name positional parameters
                 all_args = dict(zip(method_arg_names, args))
-                all_args.update(kwargs)
+                all_args |= kwargs
 
                 # Unpack display parameters; remove them from all_args if appropriate
                 if "include_config" in kwargs:
@@ -217,9 +217,8 @@ class DataAsset:
 
                 if "result_format" in argspec:
                     all_args["result_format"] = result_format
-                else:
-                    if "result_format" in all_args:
-                        del all_args["result_format"]
+                elif "result_format" in all_args:
+                    del all_args["result_format"]
 
                 all_args = recursively_convert_to_json_serializable(all_args)
 
@@ -255,7 +254,7 @@ class DataAsset:
                         for k, v in inspect.signature(func).parameters.items()
                         if v.default is not inspect.Parameter.empty
                     }
-                    default_kwarg_values.update(evaluation_args)
+                    default_kwarg_values |= evaluation_args
                     evaluation_args = default_kwarg_values
 
                 # Construct the expectation_config object
@@ -278,15 +277,14 @@ class DataAsset:
                             return_obj = ExpectationValidationResult(**return_obj)
 
                     except Exception as err:
-                        if catch_exceptions:
-                            raised_exception = True
-                            exception_traceback = traceback.format_exc()
-                            exception_message = f"{type(err).__name__}: {str(err)}"
-
-                            return_obj = ExpectationValidationResult(success=False)
-
-                        else:
+                        if not catch_exceptions:
                             raise err
+
+                        raised_exception = True
+                        exception_traceback = traceback.format_exc()
+                        exception_message = f"{type(err).__name__}: {str(err)}"
+
+                        return_obj = ExpectationValidationResult(success=False)
 
                 else:
                     return_obj = ExpectationValidationResult(
@@ -622,20 +620,26 @@ class DataAsset:
             #  which calls _copy_and_clean_up_expectation
             expectation.success_on_last_run = None
 
-            if discard_result_format_kwargs:
-                if "result_format" in expectation.kwargs:
-                    del expectation.kwargs["result_format"]
-                    discards["result_format"] += 1
+            if (
+                discard_result_format_kwargs
+                and "result_format" in expectation.kwargs
+            ):
+                del expectation.kwargs["result_format"]
+                discards["result_format"] += 1
 
-            if discard_include_config_kwargs:
-                if "include_config" in expectation.kwargs:
-                    del expectation.kwargs["include_config"]
-                    discards["include_config"] += 1
+            if (
+                discard_include_config_kwargs
+                and "include_config" in expectation.kwargs
+            ):
+                del expectation.kwargs["include_config"]
+                discards["include_config"] += 1
 
-            if discard_catch_exceptions_kwargs:
-                if "catch_exceptions" in expectation.kwargs:
-                    del expectation.kwargs["catch_exceptions"]
-                    discards["catch_exceptions"] += 1
+            if (
+                discard_catch_exceptions_kwargs
+                and "catch_exceptions" in expectation.kwargs
+            ):
+                del expectation.kwargs["catch_exceptions"]
+                discards["catch_exceptions"] += 1
 
         settings_message = ""
 

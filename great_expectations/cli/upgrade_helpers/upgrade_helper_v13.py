@@ -159,10 +159,8 @@ class UpgradeHelperV13(BaseUpgradeHelper):
 
     def manual_steps_required(self) -> bool:
         return any(
-            [
-                len(manual_upgrade_item.keys()) > 0
-                for manual_upgrade_item in self.upgrade_checklist["manual"].values()
-            ]
+            len(manual_upgrade_item.keys()) > 0
+            for manual_upgrade_item in self.upgrade_checklist["manual"].values()
         )
 
     def get_upgrade_overview(self) -> Tuple[str, bool]:
@@ -250,9 +248,10 @@ The Upgrade Helper will simply increment the config_version of your great_expect
             upgrade_overview += """
 <red>**WARNING**: Before proceeding, please make sure you have appropriate backups of your project.</red>
 """
-            if not self.upgrade_log["skipped_checkpoint_store_upgrade"]:
-                if stores_upgrade_checklist or store_names_upgrade_checklist:
-                    upgrade_overview += """
+            if not self.upgrade_log["skipped_checkpoint_store_upgrade"] and (
+                stores_upgrade_checklist or store_names_upgrade_checklist
+            ):
+                upgrade_overview += """
 <cyan>\
 Automated Steps
 ================
@@ -260,20 +259,20 @@ Automated Steps
 The following Stores and/or Store Names will be upgraded:
 
 """
-                    upgrade_overview += (
-                        f"""\
+                upgrade_overview += (
+                    f"""\
     - Stores: {", ".join(stores_upgrade_checklist)}
 """
-                        if stores_upgrade_checklist
-                        else ""
-                    )
-                    upgrade_overview += (
-                        f"""\
+                    if stores_upgrade_checklist
+                    else ""
+                )
+                upgrade_overview += (
+                    f"""\
     - Store Names: {", ".join(store_names_upgrade_checklist)}
 """
-                        if store_names_upgrade_checklist
-                        else ""
-                    )
+                    if store_names_upgrade_checklist
+                    else ""
+                )
 
             if manual_steps_required:
                 upgrade_overview += """
@@ -344,33 +343,34 @@ No manual upgrade steps are required.
         return upgrade_report, increment_version, exception_occurred
 
     def _upgrade_configuration_automatically(self) -> None:
-        if not self.upgrade_log["skipped_checkpoint_store_upgrade"]:
-            config_commented_map: CommentedMap = (
-                self.data_context.get_config().commented_map
-            )
-            for key, config in self.upgrade_checklist["automatic"]["stores"].items():
-                config_commented_map["stores"][key] = config
+        if self.upgrade_log["skipped_checkpoint_store_upgrade"]:
+            return
+        config_commented_map: CommentedMap = (
+            self.data_context.get_config().commented_map
+        )
+        for key, config in self.upgrade_checklist["automatic"]["stores"].items():
+            config_commented_map["stores"][key] = config
 
-            for key, value in self.upgrade_checklist["automatic"][
-                "store_names"
-            ].items():
-                config_commented_map[key] = value
+        for key, value in self.upgrade_checklist["automatic"][
+            "store_names"
+        ].items():
+            config_commented_map[key] = value
 
-            data_context_config: DataContextConfig = (
-                DataContextConfig.from_commented_map(commented_map=config_commented_map)
-            )
-            self.data_context.set_config(project_config=data_context_config)
-            self.data_context._save_project_config()
+        data_context_config: DataContextConfig = (
+            DataContextConfig.from_commented_map(commented_map=config_commented_map)
+        )
+        self.data_context.set_config(project_config=data_context_config)
+        self.data_context._save_project_config()
 
-            checkpoint_log_entry = {
-                "stores": {
-                    DataContextConfigDefaults.DEFAULT_CHECKPOINT_STORE_NAME.value: data_context_config.stores[
-                        DataContextConfigDefaults.DEFAULT_CHECKPOINT_STORE_NAME.value
-                    ],
-                },
-                "checkpoint_store_name": data_context_config.checkpoint_store_name,
-            }
-            self.upgrade_log["added_checkpoint_store"].update(checkpoint_log_entry)
+        checkpoint_log_entry = {
+            "stores": {
+                DataContextConfigDefaults.DEFAULT_CHECKPOINT_STORE_NAME.value: data_context_config.stores[
+                    DataContextConfigDefaults.DEFAULT_CHECKPOINT_STORE_NAME.value
+                ],
+            },
+            "checkpoint_store_name": data_context_config.checkpoint_store_name,
+        }
+        self.upgrade_log["added_checkpoint_store"].update(checkpoint_log_entry)
 
     def _generate_upgrade_report(self):
         upgrade_log_path = self._save_upgrade_log()
@@ -385,8 +385,8 @@ No manual upgrade steps are required.
         manual_steps_required = self.manual_steps_required()
 
         if increment_version:
-            if manual_steps_required:
-                upgrade_report += f"""
+            upgrade_report += (
+                f"""
 <yellow>\
 The Upgrade Helper has performed the automated upgrade steps as part of upgrading your project to be compatible with \
 Great Expectations V3 API, and the config_version of your great_expectations.yml has been automatically incremented to \
@@ -397,8 +397,8 @@ A log detailing the upgrade can be found here:
     - {upgrade_log_path}\
 </yellow>\
 """
-            else:
-                upgrade_report += f"""
+                if manual_steps_required
+                else f"""
 <green>\
 Your project was successfully upgraded to be compatible with Great Expectations V3 API.  The config_version of your \
 great_expectations.yml has been automatically incremented to 3.0.
@@ -408,9 +408,10 @@ A log detailing the upgrade can be found here:
     - {upgrade_log_path}\
 </green>\
 """
-        else:
-            if manual_steps_required:
-                upgrade_report += f"""
+            )
+
+        elif manual_steps_required:
+            upgrade_report += f"""
 <yellow>\
 The Upgrade Helper does not have any automated upgrade steps to perform as part of upgrading your project to be \
 compatible with Great Expectations V3 API, and the config_version of your great_expectations.yml is already set to \
@@ -421,8 +422,8 @@ A log detailing the upgrade can be found here:
     - {upgrade_log_path}\
 </yellow>\
 """
-            else:
-                upgrade_report += f"""
+        else:
+            upgrade_report += f"""
 <yellow>\
 The Upgrade Helper finds your project to be compatible with Great Expectations V3 API, and the config_version of your \
 great_expectations.yml is already set to 3.0.  There are no additional automatic or manual steps required, since the \

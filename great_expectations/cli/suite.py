@@ -338,26 +338,22 @@ def _suite_new_workflow(
 def _suite_convert_flags_to_interactive_mode(
     interactive_flag: bool, manual_flag: bool
 ) -> CLISuiteInteractiveFlagCombinations:
-    if interactive_flag is True and manual_flag is True:
-        interactive_mode = (
-            CLISuiteInteractiveFlagCombinations.ERROR_INTERACTIVE_TRUE_MANUAL_TRUE
-        )
-    elif interactive_flag is False and manual_flag is False:
-        interactive_mode = (
+    if interactive_flag and manual_flag:
+        return CLISuiteInteractiveFlagCombinations.ERROR_INTERACTIVE_TRUE_MANUAL_TRUE
+    elif not interactive_flag and not manual_flag:
+        return (
             CLISuiteInteractiveFlagCombinations.UNPROMPTED_INTERACTIVE_FALSE_MANUAL_FALSE
         )
-    elif interactive_flag is True and manual_flag is False:
-        interactive_mode = (
+
+    elif interactive_flag:
+        return (
             CLISuiteInteractiveFlagCombinations.UNPROMPTED_INTERACTIVE_TRUE_MANUAL_FALSE
         )
-    elif interactive_flag is False and manual_flag is True:
-        interactive_mode = (
+
+    else:
+        return (
             CLISuiteInteractiveFlagCombinations.UNPROMPTED_INTERACTIVE_FALSE_MANUAL_TRUE
         )
-    else:
-        interactive_mode = CLISuiteInteractiveFlagCombinations.UNKNOWN
-
-    return interactive_mode
 
 
 def _suite_new_process_profile_and_batch_request_flags(
@@ -431,14 +427,13 @@ def _suite_new_user_provided_any_flag(
     profile: bool,
     batch_request: Optional[str],
 ) -> bool:
-    user_provided_any_flag_skip_prompt: bool = any(
+    return any(
         (
-            (interactive_mode.value["interactive_flag"] is not None),
-            (profile is True),
-            (batch_request is not None),
+            interactive_mode.value["interactive_flag"] is not None,
+            profile,
+            batch_request is not None,
         )
     )
-    return user_provided_any_flag_skip_prompt
 
 
 def _suite_new_mode_from_prompt(
@@ -457,7 +452,7 @@ How would you like to create your Expectation Suite?
         show_default=False,
     )
     # Default option
-    if suite_create_method == "":
+    if not suite_create_method:
         profile = False
         interactive_mode = CLISuiteInteractiveFlagCombinations.PROMPTED_CHOICE_DEFAULT
     elif suite_create_method == "1":
@@ -690,11 +685,11 @@ How would you like to edit your Expectation Suite?
             show_default=False,
         )
         # Default option
-        if suite_edit_method == "":
+        if not suite_edit_method:
             interactive_mode = (
                 CLISuiteInteractiveFlagCombinations.PROMPTED_CHOICE_DEFAULT
             )
-        if suite_edit_method == "1":
+        elif suite_edit_method == "1":
             interactive_mode = CLISuiteInteractiveFlagCombinations.PROMPTED_CHOICE_FALSE
         elif suite_edit_method == "2":
             interactive_mode = CLISuiteInteractiveFlagCombinations.PROMPTED_CHOICE_TRUE
@@ -951,7 +946,7 @@ def suite_list(ctx: click.Context) -> None:
     suite_names_styled: List[str] = [
         f" - <cyan>{suite_name}</cyan>" for suite_name in suite_names
     ]
-    if len(suite_names_styled) == 0:
+    if not suite_names_styled:
         cli_message(string="No Expectation Suites found")
         send_usage_message(
             data_context=context,

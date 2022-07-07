@@ -80,20 +80,11 @@ class ColumnSkew(ColumnMetricProvider):
     value_keys = ("abs",)
 
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, abs=False, **kwargs):
-        if abs:
-            return np.abs(stats.skew(column))
-        return stats.skew(column)
+    def _pandas(self, column, abs=False, **kwargs):
+        return np.abs(stats.skew(column)) if abs else stats.skew(column)
 
     @metric_value(engine=SqlAlchemyExecutionEngine)
-    def _sqlalchemy(
-        cls,
-        execution_engine: "SqlAlchemyExecutionEngine",
-        metric_domain_kwargs: Dict,
-        metric_value_kwargs: Dict,
-        metrics: Dict[Tuple, Any],
-        runtime_configuration: Dict,
-    ):
+    def _sqlalchemy(self, execution_engine: "SqlAlchemyExecutionEngine", metric_domain_kwargs: Dict, metric_value_kwargs: Dict, metrics: Dict[Tuple, Any], runtime_configuration: Dict):
         (
             selectable,
             compute_domain_kwargs,
@@ -137,18 +128,14 @@ class ColumnSkew(ColumnMetricProvider):
         )
 
         column_skew = column_third_moment / (column_std**3) / (column_count - 1)
-        if metric_value_kwargs["abs"]:
-            return np.abs(column_skew)
-        else:
-            return column_skew
+        return np.abs(column_skew) if metric_value_kwargs["abs"] else column_skew
 
 
 def _get_query_result(func, selectable, sqlalchemy_engine):
     simple_query: Select = sa.select(func).select_from(selectable)
 
     try:
-        result: Row = sqlalchemy_engine.execute(simple_query).fetchone()[0]
-        return result
+        return sqlalchemy_engine.execute(simple_query).fetchone()[0]
     except ProgrammingError as pe:
         exception_message: str = "An SQL syntax Exception occurred."
         exception_traceback: str = traceback.format_exc()

@@ -31,7 +31,7 @@ class ColumnAggregateMatchesSomeCriteria(ColumnAggregateMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_aggregate_value(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         raise NotImplementedError
 
     # This method defines the business logic for evaluating your Metric when using a SqlAlchemyExecutionEngine

@@ -107,11 +107,9 @@ class UpgradeHelperV11(BaseUpgradeHelper):
             elif isinstance(store, MetricStore):
                 self._process_metrics_store_for_checklist(store_name, store)
 
-        sites = (
-            self.data_context.project_config_with_variables_substituted.data_docs_sites
-        )
-
-        if sites:
+        if (
+            sites := self.data_context.project_config_with_variables_substituted.data_docs_sites
+        ):
             for site_name, site_config in sites.items():
                 self._process_docs_site_for_checklist(site_name, site_config)
 
@@ -187,9 +185,7 @@ class UpgradeHelperV11(BaseUpgradeHelper):
                     "store_backend_class": type(store_backend).__name__,
                 }
             )
-        elif isinstance(store_backend, InMemoryStoreBackend):
-            pass
-        else:
+        elif not isinstance(store_backend, InMemoryStoreBackend):
             self.upgrade_log["skipped_metrics_stores"]["unsupported"].append(
                 {
                     "store_name": store_name,
@@ -309,11 +305,12 @@ class UpgradeHelperV11(BaseUpgradeHelper):
         else:
             key_name = "validation_store_name" if store_name else "site_name"
             log_dict = {
-                key_name: store_name if store_name else site_name,
+                key_name: store_name or site_name,
                 "src": src_url,
                 "dest": dest_url,
                 "exception_message": exception_message,
             }
+
             self.upgrade_log["exceptions"].append(log_dict)
 
         if store_name:
@@ -325,15 +322,14 @@ class UpgradeHelperV11(BaseUpgradeHelper):
                 self.upgrade_log["upgraded_validations_stores"][store_name][
                     "validations_updated"
                 ].append(log_dict)
+        elif exception_message:
+            self.upgrade_log["upgraded_docs_site_validations_stores"][site_name][
+                "exceptions"
+            ] = True
         else:
-            if exception_message:
-                self.upgrade_log["upgraded_docs_site_validations_stores"][site_name][
-                    "exceptions"
-                ] = True
-            else:
-                self.upgrade_log["upgraded_docs_site_validations_stores"][site_name][
-                    "validation_result_pages_updated"
-                ].append(log_dict)
+            self.upgrade_log["upgraded_docs_site_validations_stores"][site_name][
+                "validation_result_pages_updated"
+            ].append(log_dict)
 
     def _update_validation_result_json(
         self,
@@ -480,18 +476,14 @@ class UpgradeHelperV11(BaseUpgradeHelper):
             skip_with_unsupported_backends,
             skip_doc_sites_with_unsupported_backends,
         ) = self._get_skipped_store_and_site_names()
-        validations_store_name_checklist = [
-            store_name
-            for store_name in self.upgrade_checklist[
-                "validations_store_backends"
-            ].keys()
-        ]
-        site_name_checklist = [
-            site_name
-            for site_name in self.upgrade_checklist[
-                "docs_validations_store_backends"
-            ].keys()
-        ]
+        validations_store_name_checklist = list(
+            self.upgrade_checklist["validations_store_backends"].keys()
+        )
+
+        site_name_checklist = list(
+            self.upgrade_checklist["docs_validations_store_backends"].keys()
+        )
+
 
         upgrade_overview = """\
 <cyan>\
@@ -630,10 +622,7 @@ Would you like to proceed with the project upgrade?\
         skipped_stores_or_sites = any(self._get_skipped_store_and_site_names())
         exception_occurred = False
         exceptions = self.upgrade_log.get("exceptions")
-        if skipped_stores_or_sites or exceptions:
-            increment_version = False
-        else:
-            increment_version = True
+        increment_version = not skipped_stores_or_sites and not exceptions
         upgrade_report = """\
 <cyan>\
 ++================++
@@ -652,10 +641,9 @@ A log detailing the upgrade can be found here:
     - {upgrade_log_path}\
 </green>\
 """
-        else:
-            if exceptions:
-                exception_occurred = True
-                upgrade_report += f"""
+        elif exceptions:
+            exception_occurred = True
+            upgrade_report += f"""
 <red>\
 The Upgrade Helper encountered some exceptions during the upgrade process.
 Please review the exceptions section of the upgrade log and migrate the affected files manually,
@@ -666,8 +654,8 @@ The upgrade log can be found here:
     - {upgrade_log_path}\
 </red>\
 """
-            else:
-                upgrade_report += f"""
+        else:
+            upgrade_report += f"""
 <yellow>\
 The Upgrade Helper has completed the automated upgrade steps.
 A log detailing the upgrade can be found here:

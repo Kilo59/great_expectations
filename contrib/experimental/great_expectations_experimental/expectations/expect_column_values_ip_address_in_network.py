@@ -18,10 +18,10 @@ from great_expectations.expectations.metrics import (
 
 
 def is_ip_address_in_network(addr: str, ip_network) -> bool:
-    for ipn in ip_network:
-        if ipaddress.ip_address(addr) in ipaddress.ip_network(ipn):
-            return True
-    return False
+    return any(
+        ipaddress.ip_address(addr) in ipaddress.ip_network(ipn)
+        for ipn in ip_network
+    )
 
 
 # This class defines a Metric to support your Expectation.
@@ -34,7 +34,7 @@ class ColumnValuesIpAddressInNetwork(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, ip_network, **kwargs):
+    def _pandas(self, column, ip_network, **kwargs):
         return column.apply(lambda x: is_ip_address_in_network(x, ip_network))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine

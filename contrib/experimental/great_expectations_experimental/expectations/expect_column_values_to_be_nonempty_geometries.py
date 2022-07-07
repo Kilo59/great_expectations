@@ -33,7 +33,7 @@ class ColumnValuesNonemptyGeometries(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         # We need to use shape and mapping to convert the GeoJSON to a Shapely object and vice versa
         column = column.apply(shape)
         # Use the ~ operator to check if each value is not empty
@@ -153,14 +153,10 @@ class ExpectColumnValuesToBeNonemptyGeometries(ColumnMapExpectation):
         if params["mostly"] is None:
             template_str = "values must be shapely geometries that aren't empty"
         else:
-            if params["mostly"] is not None:
-                params["mostly_pct"] = num_to_str(
-                    params["mostly"] * 100, precision=15, no_scientific=True
-                )
-                template_str += ", at least $mostly_pct % of the time."
-            else:
-                template_str += "."
-
+            params["mostly_pct"] = num_to_str(
+                params["mostly"] * 100, precision=15, no_scientific=True
+            )
+            template_str += ", at least $mostly_pct % of the time."
         if include_column_name:
             template_str = f"$column {template_str}"
 

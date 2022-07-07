@@ -20,11 +20,10 @@ from great_expectations.expectations.metrics import (
 def is_valid_zip5(zip: str):
     if len(zip) != 5:
         return False
-    else:
-        try:
-            return zipcodes.is_real(zip)
-        except:
-            return False
+    try:
+        return zipcodes.is_real(zip)
+    except:
+        return False
 
 
 # This class defines a Metric to support your Expectation.
@@ -36,7 +35,7 @@ class ColumnValuesToBeValidZip5(ColumnMapMetricProvider):
 
     # This method implements the core logic for the PandasExecutionEngine
     @column_condition_partial(engine=PandasExecutionEngine)
-    def _pandas(cls, column, **kwargs):
+    def _pandas(self, column, **kwargs):
         return column.apply(lambda x: is_valid_zip5(x))
 
     # This method defines the business logic for evaluating your metric when using a SqlAlchemyExecutionEngine
