@@ -483,6 +483,9 @@ class RuleConfigSchema(NotNullSchema):
 
 
 class RuleBasedProfilerConfig(BaseYamlConfig):
+
+    id_ = fields.String(data_key="id")
+
     def __init__(
         self,
         name: str,
